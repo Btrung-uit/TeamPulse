@@ -28,6 +28,8 @@ TestResults/
 playwright-report/
 uploads/
 *.log
+database/seed/*-preview.png
+database/seed/*.inspect.ndjson
 
 # Obsidian machine-specific state (keep shared vault settings versioned)
 **/.obsidian/workspace*.json
