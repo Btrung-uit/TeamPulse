@@ -29,7 +29,7 @@ playwright-report/
 uploads/
 *.log
 
-# Obsidian per-user state
-docs/TeamPulse-Brain/.obsidian/
-docs/TeamPulse-Brain/TeamPulse-Vault/.obsidian/workspace.json
-docs/TeamPulse-Brain/TeamPulse-Vault/.obsidian/workspace-mobile.json
+# Obsidian machine-specific state (keep shared vault settings versioned)
+**/.obsidian/workspace*.json
+**/.obsidian/cache/
+**/.obsidian/.trash/

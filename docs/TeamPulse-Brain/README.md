@@ -1,14 +1,36 @@
-# TeamPulse Brain
+---
+id: TP-HOME-000
+type: guide
+status: active
+area: knowledge-management
+tags: [teampulse, obsidian, guide]
+created: 2026-10-14
+updated: 2026-10-14
+---
 
-The Obsidian vault is located at `TeamPulse-Vault/`.
+# TeamPulse Vault Guide
 
-To use it:
+This vault is the project brain for TeamPulse. Start at [[Home]].
 
-1. Open Obsidian.
-2. Choose **Open folder as vault**.
-3. Select `docs/TeamPulse-Brain/TeamPulse-Vault`.
-4. Start at `00-Home/Home.md`.
+## Atomic-note rules
 
-The vault uses atomic notes: one concept, rule, decision, or question per note. Maps of Content (MOCs) provide navigation without merging everything into one oversized specification.
+1. One note captures one concept, rule, decision, risk, or question.
+2. Use canonical English names for domain concepts and explain them in Vietnamese.
+3. Link related notes with Obsidian wikilinks; do not duplicate long sections.
+4. Mark uncertain items as `proposed`, not `accepted`.
+5. Update `updated` whenever meaning changes.
+6. Durable architecture decisions must also have a canonical ADR in `docs/adr/`.
+7. The root `CONTEXT.md` remains the canonical glossary used by code.
 
-Canonical code-facing terminology remains in the repository root `CONTEXT.md`. Architectural decisions remain in `docs/adr/`.
+## ID prefixes
+
+| Prefix | Area |
+|---|---|
+| `TP-PROD` | Product |
+| `TP-DOM` | Domain |
+| `TP-UX` | UX and design |
+| `TP-ARCH` | Architecture |
+| `TP-DATA` | Data |
+| `TP-INT` | Integrations |
+| `TP-DEL` | Delivery |
+| `TP-RES` | Research and validation |
