@@ -1,0 +1,35 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+
+# Node / frontend
+node_modules/
+dist/
+coverage/
+*.local
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+appsettings.Local.json
+
+# IDE / OS
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test and runtime artifacts
+TestResults/
+playwright-report/
+uploads/
+*.log
+
+# Obsidian per-user state
+docs/TeamPulse-Brain/.obsidian/
+docs/TeamPulse-Brain/TeamPulse-Vault/.obsidian/workspace.json
+docs/TeamPulse-Brain/TeamPulse-Vault/.obsidian/workspace-mobile.json
