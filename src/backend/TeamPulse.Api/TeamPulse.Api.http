@@ -1,0 +1,11 @@
+@TeamPulse.Api_HostAddress = http://localhost:5249
+
+GET {{TeamPulse.Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{TeamPulse.Api_HostAddress}}/api
+Accept: application/json
+
+###

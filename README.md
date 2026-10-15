@@ -4,7 +4,7 @@
 >
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
-![Status](https://img.shields.io/badge/status-planning-C9A24A)
+![Status](https://img.shields.io/badge/status-foundation-C9A24A)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
 ![Database](https://img.shields.io/badge/database-SQL%20Server-CC2927)
@@ -119,8 +119,10 @@ TeamPulse/
 │   ├── api/
 │   ├── design/
 │   ├── diagrams/
-│   └── TeamPulse-Brain/TeamPulse-Vault/
+│   └── TeamPulse-Brain/
 ├── scripts/
+├── TeamPulse.sln
+├── global.json
 ├── CONTEXT.md
 └── README.md
 ```
@@ -147,13 +149,37 @@ Google Drive API, dependency visualization, advisor dashboard và analytics nân
 - Desktop-first; mobile tập trung theo dõi và thao tác nhanh có rủi ro thấp.
 - Trạng thái nghiệp vụ luôn có text/icon, không chỉ biểu diễn bằng màu.
 
+## Chạy nền tảng hiện tại
+
+Yêu cầu: .NET SDK 10.0.401 trở lên và Node.js `^20.19.0` hoặc `>=22.12.0`.
+
+```powershell
+# Backend: restore, build và test
+dotnet restore TeamPulse.sln
+dotnet build TeamPulse.sln --no-restore
+dotnet test TeamPulse.sln --no-build
+
+# Chạy API tại http://localhost:5249
+dotnet run --project src/backend/TeamPulse.Api
+```
+
+Trong terminal khác:
+
+```powershell
+cd src/frontend
+npm ci
+npm run dev
+```
+
+Kiểm tra API với `GET http://localhost:5249/health`. Kiểm tra production build của frontend bằng `npm run build`.
+
 ## Trạng thái dự án
 
-Hiện tại dự án đang ở giai đoạn **planning và design**. Cấu trúc source đã được chuẩn bị nhưng chưa scaffold ứng dụng chạy được. Hướng dẫn build/run sẽ được bổ sung sau khi khởi tạo backend, frontend và Docker Compose.
+TP-002 đã tạo nền tảng chạy được: ASP.NET Core modular monolith, React + TypeScript, health endpoint, project references, lint/format và smoke tests. Database, authentication và feature modules chưa được triển khai.
 
 ## Project Brain
 
-Các quyết định, quy tắc domain, thiết kế, kiến trúc, tích hợp và kế hoạch delivery được chia thành atomic notes tại [`docs/TeamPulse-Brain/TeamPulse-Vault`](docs/TeamPulse-Brain/TeamPulse-Vault/00-Home/Home.md).
+Các quyết định, quy tắc domain, thiết kế, kiến trúc, tích hợp và kế hoạch delivery được chia thành atomic notes tại [`docs/TeamPulse-Brain`](docs/TeamPulse-Brain/00-Home/Home.md).
 
 `CONTEXT.md` là glossary chuẩn cho code. `docs/adr/` là nơi lưu các quyết định kiến trúc khó đảo ngược.
 
@@ -199,13 +225,37 @@ React + TypeScript, ASP.NET Core Web API, SQL Server, Entity Framework Core, ASP
 - **Phase 2:** GitHub App/webhooks, PR Waiting Room, workflow automation, realtime updates, and richer notifications.
 - **Phase 3:** Drive integration, dependency visualization, advisor views, and advanced analytics.
 
+## Run the current foundation
+
+Requirements: .NET SDK 10.0.401 or newer and Node.js `^20.19.0` or `>=22.12.0`.
+
+```powershell
+# Backend: restore, build, and test
+dotnet restore TeamPulse.sln
+dotnet build TeamPulse.sln --no-restore
+dotnet test TeamPulse.sln --no-build
+
+# Run the API at http://localhost:5249
+dotnet run --project src/backend/TeamPulse.Api
+```
+
+In another terminal:
+
+```powershell
+cd src/frontend
+npm ci
+npm run dev
+```
+
+Verify the API with `GET http://localhost:5249/health`. Verify the frontend production build with `npm run build`.
+
 ## Current status
 
-The project is in **planning and design**. The source tree exists, but no runnable backend/frontend application has been scaffolded yet. Build and run instructions will be added once the implementation foundation is created.
+TP-002 provides a runnable foundation: an ASP.NET Core modular monolith, React + TypeScript, a health endpoint, project references, lint/format tooling, and smoke tests. Database, authentication, and feature modules are not implemented yet.
 
 ## Documentation
 
-Open the project knowledge base at [`docs/TeamPulse-Brain/TeamPulse-Vault`](docs/TeamPulse-Brain/TeamPulse-Vault/00-Home/Home.md). Canonical domain language lives in [`CONTEXT.md`](CONTEXT.md), while durable architectural decisions live in [`docs/adr`](docs/adr/).
+Open the project knowledge base at [`docs/TeamPulse-Brain`](docs/TeamPulse-Brain/00-Home/Home.md). Canonical domain language lives in [`CONTEXT.md`](CONTEXT.md), while durable architectural decisions live in [`docs/adr`](docs/adr/).
 
 ## License
 
