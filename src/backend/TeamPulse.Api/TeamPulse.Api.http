@@ -5,6 +5,16 @@ Accept: application/json
 
 ###
 
+GET {{TeamPulse.Api_HostAddress}}/health/live
+Accept: application/json
+
+###
+
+GET {{TeamPulse.Api_HostAddress}}/health/ready
+Accept: application/json
+
+###
+
 GET {{TeamPulse.Api_HostAddress}}/api
 Accept: application/json
 

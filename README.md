@@ -113,7 +113,9 @@ TeamPulse/
 │   │   └── TeamPulse.IntegrationTests/
 │   ├── frontend/
 │   └── e2e/
-├── database/seed/
+├── database/
+│   ├── init/
+│   └── seed/
 ├── docs/
 │   ├── adr/
 │   ├── api/
@@ -121,6 +123,8 @@ TeamPulse/
 │   ├── diagrams/
 │   └── TeamPulse-Brain/
 ├── scripts/
+├── .env.example
+├── docker-compose.yml
 ├── TeamPulse.sln
 ├── global.json
 ├── CONTEXT.md
@@ -149,9 +153,24 @@ Google Drive API, dependency visualization, advisor dashboard và analytics nân
 - Desktop-first; mobile tập trung theo dõi và thao tác nhanh có rủi ro thấp.
 - Trạng thái nghiệp vụ luôn có text/icon, không chỉ biểu diễn bằng màu.
 
-## Chạy nền tảng hiện tại
+## Chạy local
 
-Yêu cầu: .NET SDK 10.0.401 trở lên và Node.js `^20.19.0` hoặc `>=22.12.0`.
+Yêu cầu: Docker Desktop (hoặc Docker Engine với Compose v2), .NET SDK 10.0.401 trở lên và Node.js `^20.19.0` hoặc `>=22.12.0`.
+
+Thiết lập SQL Server lần đầu:
+
+```powershell
+Copy-Item .env.example .env
+# Đổi MSSQL_SA_PASSWORD trong .env trước khi sử dụng lâu dài.
+docker compose up -d
+
+# Dùng cùng password vừa đặt trong .env; secret được lưu ngoài repository.
+dotnet user-secrets set --project src/backend/TeamPulse.Api `
+  "ConnectionStrings:TeamPulse" `
+  "Server=localhost,1433;Database=TeamPulse;User Id=sa;Password=<your-password>;TrustServerCertificate=True"
+```
+
+Những lần sau, một lệnh `docker compose up -d` sẽ khởi động SQL Server và bảo đảm database `TeamPulse` tồn tại.
 
 ```powershell
 # Backend: restore, build và test
@@ -171,11 +190,16 @@ npm ci
 npm run dev
 ```
 
-Kiểm tra API với `GET http://localhost:5249/health`. Kiểm tra production build của frontend bằng `npm run build`.
+Các health endpoint:
+
+- `GET http://localhost:5249/health` hoặc `/health/live`: API đang chạy.
+- `GET http://localhost:5249/health/ready`: API kết nối được SQL Server.
+
+Kiểm tra production build của frontend bằng `npm run build`. Dừng hạ tầng local bằng `docker compose down`; named volume giữ lại dữ liệu giữa các lần chạy.
 
 ## Trạng thái dự án
 
-TP-002 đã tạo nền tảng chạy được: ASP.NET Core modular monolith, React + TypeScript, health endpoint, project references, lint/format và smoke tests. Database, authentication và feature modules chưa được triển khai.
+TP-003 đã bổ sung SQL Server local bằng Docker Compose, khởi tạo database idempotent, EF Core connection và health checks live/ready. Schema nghiệp vụ, migrations, authentication và feature modules chưa được triển khai.
 
 ## Project Brain
 
@@ -225,9 +249,24 @@ React + TypeScript, ASP.NET Core Web API, SQL Server, Entity Framework Core, ASP
 - **Phase 2:** GitHub App/webhooks, PR Waiting Room, workflow automation, realtime updates, and richer notifications.
 - **Phase 3:** Drive integration, dependency visualization, advisor views, and advanced analytics.
 
-## Run the current foundation
+## Run locally
 
-Requirements: .NET SDK 10.0.401 or newer and Node.js `^20.19.0` or `>=22.12.0`.
+Requirements: Docker Desktop (or Docker Engine with Compose v2), .NET SDK 10.0.401 or newer, and Node.js `^20.19.0` or `>=22.12.0`.
+
+Set up SQL Server for the first time:
+
+```powershell
+Copy-Item .env.example .env
+# Change MSSQL_SA_PASSWORD in .env before long-term use.
+docker compose up -d
+
+# Use the same password configured in .env; the secret is stored outside the repository.
+dotnet user-secrets set --project src/backend/TeamPulse.Api `
+  "ConnectionStrings:TeamPulse" `
+  "Server=localhost,1433;Database=TeamPulse;User Id=sa;Password=<your-password>;TrustServerCertificate=True"
+```
+
+On subsequent runs, the single command `docker compose up -d` starts SQL Server and ensures that the `TeamPulse` database exists.
 
 ```powershell
 # Backend: restore, build, and test
@@ -247,11 +286,16 @@ npm ci
 npm run dev
 ```
 
-Verify the API with `GET http://localhost:5249/health`. Verify the frontend production build with `npm run build`.
+Health endpoints:
+
+- `GET http://localhost:5249/health` or `/health/live`: the API process is running.
+- `GET http://localhost:5249/health/ready`: the API can connect to SQL Server.
+
+Verify the frontend production build with `npm run build`. Stop local infrastructure with `docker compose down`; the named volume preserves data between runs.
 
 ## Current status
 
-TP-002 provides a runnable foundation: an ASP.NET Core modular monolith, React + TypeScript, a health endpoint, project references, lint/format tooling, and smoke tests. Database, authentication, and feature modules are not implemented yet.
+TP-003 adds local SQL Server through Docker Compose, idempotent database initialization, an EF Core connection, and separate live/ready health checks. Domain schema, migrations, authentication, and feature modules are not implemented yet.
 
 ## Documentation
 
