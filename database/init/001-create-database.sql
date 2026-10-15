@@ -1,0 +1,5 @@
+IF DB_ID(N'TeamPulse') IS NULL
+BEGIN
+    CREATE DATABASE [TeamPulse];
+END;
+GO

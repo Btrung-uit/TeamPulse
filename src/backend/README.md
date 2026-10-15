@@ -27,4 +27,18 @@ dotnet test TeamPulse.sln --no-build
 dotnet run --project src/backend/TeamPulse.Api
 ```
 
-The development API listens at `http://localhost:5249`. Its foundation endpoints are `/health` and `/api`.
+The development API listens at `http://localhost:5249`.
+
+## Local configuration
+
+The API requires the `ConnectionStrings:TeamPulse` setting and fails fast when it is missing. Keep the local value outside Git with .NET User Secrets:
+
+```powershell
+dotnet user-secrets set --project src/backend/TeamPulse.Api `
+  "ConnectionStrings:TeamPulse" `
+  "Server=localhost,1433;Database=TeamPulse;User Id=sa;Password=<your-password>;TrustServerCertificate=True"
+```
+
+Use `/health` or `/health/live` for liveness and `/health/ready` for SQL Server readiness. `/api` returns basic API metadata.
+
+`TeamPulseDbContext` intentionally has no domain schema yet. Entities and the first migration belong to TP-010.
