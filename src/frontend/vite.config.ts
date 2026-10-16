@@ -5,6 +5,11 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      '/api': 'http://localhost:5249',
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

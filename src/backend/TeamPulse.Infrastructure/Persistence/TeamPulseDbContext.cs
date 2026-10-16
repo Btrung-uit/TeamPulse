@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TeamPulse.Application.Common.Interfaces;
 using TeamPulse.Domain.Common;
 using TeamPulse.Domain.Projects;
 using TeamPulse.Domain.Users;
 using TeamPulse.Domain.Workspaces;
+using TeamPulse.Infrastructure.Identity;
 
 namespace TeamPulse.Infrastructure.Persistence;
 
@@ -11,12 +13,12 @@ public sealed class TeamPulseDbContext(
     DbContextOptions<TeamPulseDbContext> options,
     IWorkspaceScope workspaceScope,
     TimeProvider timeProvider)
-    : DbContext(options)
+    : IdentityUserContext<IdentityAccount, Guid>(options)
 {
     private readonly IWorkspaceScope _workspaceScope = workspaceScope;
     private readonly TimeProvider _timeProvider = timeProvider;
 
-    public DbSet<User> Users => Set<User>();
+    public DbSet<User> UserProfiles => Set<User>();
 
     public DbSet<Workspace> Workspaces => Set<Workspace>();
 
@@ -26,8 +28,11 @@ public sealed class TeamPulseDbContext(
 
     public DbSet<Sprint> Sprints => Set<Sprint>();
 
+    public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TeamPulseDbContext).Assembly);
 
         modelBuilder.Entity<Workspace>()

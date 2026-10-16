@@ -41,10 +41,25 @@ The API requires the `ConnectionStrings:TeamPulse` setting and fails fast when i
 dotnet user-secrets set --project src/backend/TeamPulse.Api `
   "ConnectionStrings:TeamPulse" `
   "Server=localhost,1433;Database=TeamPulse;User Id=sa;Password=<your-password>;TrustServerCertificate=True"
+
+$jwtSigningKey = [Convert]::ToBase64String(
+  [Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+dotnet user-secrets set --project src/backend/TeamPulse.Api `
+  "Authentication:Jwt:SigningKey" $jwtSigningKey
 ```
 
 Use `/health` or `/health/live` for liveness and `/health/ready` for SQL Server readiness. `/api` returns basic API metadata.
 
 `TeamPulseDbContext` contains the `User`, `Workspace`, `WorkspaceMember`, `Project`, and `Sprint` foundation schema. Its migrations live under `TeamPulse.Infrastructure/Persistence/Migrations`.
 
-Workspace-owned entity queries are denied until a scoped `WorkspaceScope` is selected. The normal HTTP resolver will be added with authentication and membership in TP-011/TP-012. Any future query that deliberately bypasses the filters must explicitly use `IgnoreQueryFilters()` and perform an equivalent authorization check.
+Workspace-owned entity queries are denied until a scoped `WorkspaceScope` is selected. The membership-aware HTTP resolver will be added in TP-012. Any future query that deliberately bypasses the filters must explicitly use `IgnoreQueryFilters()` and perform an equivalent authorization check.
+
+## Authentication endpoints
+
+- `POST /api/auth/register`: create the domain profile and Identity credential in one transaction.
+- `POST /api/auth/login`: validate the password with lockout protection.
+- `POST /api/auth/refresh`: rotate the HTTP-only refresh cookie and issue a new JWT.
+- `POST /api/auth/logout`: revoke the refresh session and delete its cookie.
+- `GET /api/auth/me`: return the current user; requires a valid Bearer JWT.
+
+The access token is short-lived and returned in the JSON body. Refresh tokens are never persisted in plaintext; only their SHA-256 hashes are stored in `RefreshSessions`.

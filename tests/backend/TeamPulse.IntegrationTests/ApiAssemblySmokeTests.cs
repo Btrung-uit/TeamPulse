@@ -1,20 +1,12 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-
 namespace TeamPulse.IntegrationTests;
 
-public sealed class ApiAssemblySmokeTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ApiAssemblySmokeTests : IClassFixture<TeamPulseApiFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TeamPulseApiFactory _factory;
 
-    public ApiAssemblySmokeTests(WebApplicationFactory<Program> factory)
+    public ApiAssemblySmokeTests(TeamPulseApiFactory factory)
     {
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.UseSetting(
-                "ConnectionStrings:TeamPulse",
-                "Server=(localdb)\\MSSQLLocalDB;Database=master;Integrated Security=True;TrustServerCertificate=True");
-        });
+        _factory = factory;
     }
 
     [Fact]
