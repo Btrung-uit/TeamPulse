@@ -1,4 +1,5 @@
 using TeamPulse.Domain.Common;
+using TeamPulse.Domain.Tasks;
 using TeamPulse.Domain.Workspaces;
 
 namespace TeamPulse.Domain.Projects;
@@ -56,6 +57,8 @@ public sealed class Project : AuditableEntity
     public WorkspaceMember CreatedByMember { get; private set; } = null!;
 
     public ICollection<Sprint> Sprints { get; } = [];
+
+    public ICollection<ProjectTask> Tasks { get; } = [];
 
     public void UpdateDetails(string name, string? description)
     {
