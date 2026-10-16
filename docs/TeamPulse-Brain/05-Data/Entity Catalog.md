@@ -10,13 +10,13 @@ updated: 2026-10-16
 
 # Entity Catalog
 
-Foundation entities đã triển khai trong `TP-010`:
+Các entity đã triển khai qua `TP-010` và `TP-012`:
 
-`User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`.
+`User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, `ActivityLog`.
 
 Các entity dự kiến cho các milestone tiếp theo:
 
-`Task`, `TaskDependency`, `TaskEvidence`, `TaskComment`, `ActivityLog`, `Resource`, `ImportBatch`, `ImportRow`, `Notification`.
+`Task`, `TaskDependency`, `TaskEvidence`, `TaskComment`, `Resource`, `ImportBatch`, `ImportRow`, `Notification`.
 
 Phase 2 thêm `ConnectedRepository`, `GitHubDelivery`, `PullRequestSnapshot`, `CommitEvidence` và integration credentials.
 

@@ -50,9 +50,9 @@ dotnet user-secrets set --project src/backend/TeamPulse.Api `
 
 Use `/health` or `/health/live` for liveness and `/health/ready` for SQL Server readiness. `/api` returns basic API metadata.
 
-`TeamPulseDbContext` contains the `User`, `Workspace`, `WorkspaceMember`, `Project`, and `Sprint` foundation schema. Its migrations live under `TeamPulse.Infrastructure/Persistence/Migrations`.
+`TeamPulseDbContext` contains the `User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, and immutable `ActivityLog` schema. Its migrations live under `TeamPulse.Infrastructure/Persistence/Migrations`.
 
-Workspace-owned entity queries are denied until a scoped `WorkspaceScope` is selected. The membership-aware HTTP resolver will be added in TP-012. Any future query that deliberately bypasses the filters must explicitly use `IgnoreQueryFilters()` and perform an equivalent authorization check.
+Workspace-owned entity queries are denied until a scoped `WorkspaceScope` is selected. The `WorkspaceMember` and `WorkspaceLeader` policies load an active membership from the database before selecting that scope. Any future query that deliberately bypasses the filters must explicitly use `IgnoreQueryFilters()` and perform an equivalent authorization check.
 
 ## Authentication endpoints
 
@@ -63,3 +63,14 @@ Workspace-owned entity queries are denied until a scoped `WorkspaceScope` is sel
 - `GET /api/auth/me`: return the current user; requires a valid Bearer JWT.
 
 The access token is short-lived and returned in the JSON body. Refresh tokens are never persisted in plaintext; only their SHA-256 hashes are stored in `RefreshSessions`.
+
+## Workspace endpoints
+
+- `GET /api/workspaces`: list the current user's active memberships.
+- `POST /api/workspaces`: create a workspace and its first Leader membership.
+- `GET /api/workspaces/{workspaceId}`: read a workspace as an active member.
+- `GET /api/workspaces/{workspaceId}/members`: list active members.
+- `POST /api/workspaces/{workspaceId}/members`: add an existing registered user; Leader only.
+- `PATCH /api/workspaces/{workspaceId}/members/{userId}/role`: change a role; Leader only.
+
+Member mutations create immutable `ActivityLog` rows. The API prevents demoting the final active Leader so a workspace cannot lose all administrators.
