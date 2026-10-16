@@ -103,8 +103,8 @@ Một task chỉ được đánh dấu Done khi:
 ## TP-012 — Workspace membership và RBAC
 
 - **Ưu tiên:** P0 · **Ước lượng:** 1.25 ngày · **Phụ thuộc:** TP-010, TP-011
-- **Thực hiện:** Role `Leader`, `Member`, `Viewer`; API tạo workspace, mời/thêm thành viên (có thể dùng email đã tồn tại), thay role và kiểm tra membership policy.
-- **Acceptance criteria:** Leader không truy cập được workspace khác; Viewer không có mutation; Member không tự tăng quyền; mọi membership mutation có activity entry.
+- **Thực hiện:** Role `Leader`, `Member`, `Advisor`; API tạo workspace, mời/thêm thành viên (có thể dùng email đã tồn tại), thay role và kiểm tra membership policy.
+- **Acceptance criteria:** Leader không truy cập được workspace khác; Advisor không có mutation; Member không tự tăng quyền; mọi membership mutation có activity entry.
 - **Đầu ra:** Authorization policies, membership endpoints và màn hình workspace onboarding.
 
 ## TP-013 — Project list, create và project switcher
@@ -247,7 +247,7 @@ Một task chỉ được đánh dấu Done khi:
 
 - **Ưu tiên:** P0 · **Ước lượng:** 1.25 ngày · **Phụ thuộc:** TP-031, TP-032
 - **Thực hiện:** Full-screen, read-only, không sidebar; project outcome, KPI/current phase, members/contribution evidence, key resources/repository/demo/slides.
-- **Acceptance criteria:** Mở được từ project; Viewer/Advisor chỉ đọc; giao diện đủ rõ để trình bày trong 3–5 phút; không hiển thị dữ liệu workspace khác.
+- **Acceptance criteria:** Mở được từ project; Advisor chỉ đọc; giao diện đủ rõ để trình bày trong 3–5 phút; không hiển thị dữ liệu workspace khác.
 - **Đầu ra:** Presentation screen và public/read-only policy phù hợp.
 
 ## TP-044 — E2E core demo flow
