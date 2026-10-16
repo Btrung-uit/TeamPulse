@@ -8,4 +8,10 @@ public enum ActivityAction
     ProjectCreated,
     ProjectUpdated,
     ProjectArchived,
+    SprintCreated,
+    SprintUpdated,
+    SprintDeleted,
+    TaskSprintChanged,
+    TaskDependencyAdded,
+    TaskDependencyRemoved,
 }
