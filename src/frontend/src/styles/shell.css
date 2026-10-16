@@ -230,6 +230,103 @@
   text-align: left;
 }
 
+.project-switcher-shell {
+  position: relative;
+}
+
+.project-switcher:disabled {
+  cursor: wait;
+  opacity: 0.64;
+}
+
+.project-switcher-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: 60;
+  width: min(340px, calc(100vw - 32px));
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-floating);
+}
+
+.project-switcher-menu > p {
+  padding: var(--space-2) var(--space-3);
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+  font-weight: 740;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.project-switcher-menu__list {
+  display: grid;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.project-switcher-menu__item,
+.project-switcher-menu__all {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.project-switcher-menu__item:hover,
+.project-switcher-menu__all:hover {
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+}
+
+.project-switcher-menu__item > span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  place-items: center;
+  color: var(--color-accent-strong);
+  background: var(--color-accent-soft);
+  font-size: var(--font-size-xs);
+  font-weight: 780;
+}
+
+.project-switcher-menu__item strong {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-switcher-menu__item > svg {
+  color: var(--color-accent-strong);
+}
+
+.project-switcher-menu__empty {
+  display: block;
+  padding: var(--space-4) var(--space-3);
+  color: var(--color-text-subtle);
+}
+
+.project-switcher-menu__all {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-control) var(--radius-control);
+  color: var(--color-accent-strong);
+  font-weight: 700;
+}
+
 .project-switcher__mark {
   width: 36px;
   height: 36px;
@@ -419,7 +516,7 @@
     left: var(--space-3);
     z-index: 40;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
     padding: var(--space-2);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-card);

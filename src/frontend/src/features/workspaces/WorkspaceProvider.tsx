@@ -95,6 +95,12 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     return workspace
   }
 
+  function selectWorkspace(workspaceId: string) {
+    setCurrentWorkspace(
+      workspaces.find((workspace) => workspace.id === workspaceId) ?? null,
+    )
+  }
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -103,6 +109,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
         currentWorkspace,
         error,
         createWorkspace,
+        selectWorkspace,
         reload: load,
       }}
     >
