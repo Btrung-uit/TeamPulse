@@ -49,6 +49,7 @@ app.MapGet("/api", () => Results.Ok(new
     .WithName("GetApiInfo");
 
 app.MapAuthEndpoints();
+app.MapWorkspaceEndpoints();
 
 app.Run();
 

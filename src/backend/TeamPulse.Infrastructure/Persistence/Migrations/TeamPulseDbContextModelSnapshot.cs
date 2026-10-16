@@ -86,6 +86,58 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TeamPulse.Domain.Activities.ActivityLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(48)
+                        .HasColumnType("nvarchar(48)");
+
+                    b.Property<Guid>("ActorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("NewValue")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("PreviousValue")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<Guid?>("SubjectUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("SubjectUserId");
+
+                    b.HasIndex("WorkspaceId", "OccurredAtUtc");
+
+                    b.HasIndex("WorkspaceId", "EntityType", "EntityId");
+
+                    b.ToTable("ActivityLogs", (string)null);
+                });
+
             modelBuilder.Entity("TeamPulse.Domain.Projects.Project", b =>
                 {
                     b.Property<Guid>("Id")
@@ -447,6 +499,32 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TeamPulse.Domain.Activities.ActivityLog", b =>
+                {
+                    b.HasOne("TeamPulse.Domain.Users.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeamPulse.Domain.Users.User", "SubjectUser")
+                        .WithMany()
+                        .HasForeignKey("SubjectUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TeamPulse.Domain.Workspaces.Workspace", "Workspace")
+                        .WithMany("Activities")
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActorUser");
+
+                    b.Navigation("SubjectUser");
+
+                    b.Navigation("Workspace");
+                });
+
             modelBuilder.Entity("TeamPulse.Domain.Projects.Project", b =>
                 {
                     b.HasOne("TeamPulse.Domain.Workspaces.Workspace", "Workspace")
@@ -552,6 +630,8 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("TeamPulse.Domain.Workspaces.Workspace", b =>
                 {
+                    b.Navigation("Activities");
+
                     b.Navigation("Members");
 
                     b.Navigation("Projects");

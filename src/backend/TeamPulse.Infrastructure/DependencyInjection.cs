@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -9,9 +10,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using TeamPulse.Application.Authentication;
 using TeamPulse.Application.Common.Interfaces;
+using TeamPulse.Application.Workspaces;
+using TeamPulse.Domain.Workspaces;
+using TeamPulse.Infrastructure.Authorization;
 using TeamPulse.Infrastructure.Identity;
 using TeamPulse.Infrastructure.Multitenancy;
 using TeamPulse.Infrastructure.Persistence;
+using TeamPulse.Infrastructure.Workspaces;
 
 namespace TeamPulse.Infrastructure;
 
@@ -84,9 +89,25 @@ public static class DependencyInjection
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(
+                WorkspacePolicies.Member,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(new WorkspaceRoleRequirement(
+                        new HashSet<WorkspaceRole>())));
+            options.AddPolicy(
+                WorkspacePolicies.Leader,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(new WorkspaceRoleRequirement(
+                        new HashSet<WorkspaceRole> { WorkspaceRole.Leader })));
+        });
+        services.AddScoped<IAuthorizationHandler, WorkspaceAuthorizationHandler>();
         services.AddScoped<TokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IWorkspaceService, WorkspaceService>();
 
         return services;
     }

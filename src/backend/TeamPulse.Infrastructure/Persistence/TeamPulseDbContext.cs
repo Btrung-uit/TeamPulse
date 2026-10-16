@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TeamPulse.Application.Common.Interfaces;
+using TeamPulse.Domain.Activities;
 using TeamPulse.Domain.Common;
 using TeamPulse.Domain.Projects;
 using TeamPulse.Domain.Users;
@@ -24,6 +25,8 @@ public sealed class TeamPulseDbContext(
 
     public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
 
+    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+
     public DbSet<Project> Projects => Set<Project>();
 
     public DbSet<Sprint> Sprints => Set<Sprint>();
@@ -44,6 +47,11 @@ public sealed class TeamPulseDbContext(
             .HasQueryFilter(member =>
                 _workspaceScope.WorkspaceId.HasValue &&
                 member.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<ActivityLog>()
+            .HasQueryFilter(activity =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                activity.WorkspaceId == _workspaceScope.WorkspaceId.Value);
 
         modelBuilder.Entity<Project>()
             .HasQueryFilter(project =>

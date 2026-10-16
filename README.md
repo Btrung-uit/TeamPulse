@@ -222,7 +222,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-TP-011 đã bổ sung ASP.NET Core Identity, JWT access token, rotating refresh session, register/login/logout/current-user API, Login/Register screen và protected routes. Token không được đặt trong URL hoặc browser storage; workspace membership/RBAC sẽ được triển khai trong TP-012.
+TP-012 bổ sung workspace onboarding, membership API, role `Leader`/`Member`/`Advisor`, authorization policy theo tenant và `ActivityLog` bất biến. Người dùng không có workspace được chuyển tới bước khởi tạo đầu tiên; quyền luôn được đọc từ database thay vì JWT.
 
 ## Project Brain
 
@@ -340,7 +340,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-TP-011 adds ASP.NET Core Identity, JWT access tokens, rotating refresh sessions, register/login/logout/current-user APIs, Login/Register screens, and protected routes. Tokens never appear in URLs or browser storage; workspace membership and RBAC follow in TP-012.
+TP-012 adds workspace onboarding, membership APIs, tenant-scoped `Leader`/`Member`/`Advisor` authorization policies, and an immutable `ActivityLog`. Users without a workspace are redirected to first-workspace setup, and current roles are always loaded from the database rather than JWT claims.
 
 ## Documentation
 

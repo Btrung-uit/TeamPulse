@@ -1,8 +1,17 @@
 import { NavLink } from 'react-router-dom'
 
 import { desktopNavigation } from '@/app/navigation/navigation'
+import { useWorkspace } from '@/features/workspaces/useWorkspace'
 
 export function Sidebar() {
+  const { currentWorkspace } = useWorkspace()
+  const initials = currentWorkspace?.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+
   return (
     <aside className="sidebar" aria-label="Primary navigation">
       <NavLink className="brand" to="/" aria-label="TeamPulse dashboard">
@@ -45,11 +54,14 @@ export function Sidebar() {
 
       <div className="sidebar__workspace">
         <span className="workspace-avatar" aria-hidden="true">
-          CE
+          {initials || 'TP'}
         </span>
         <span className="sidebar__workspace-copy">
-          <strong>UIT Workspace</strong>
-          <small>4 members</small>
+          <strong>{currentWorkspace?.name ?? 'Workspace'}</strong>
+          <small>
+            {currentWorkspace?.memberCount ?? 0}{' '}
+            {(currentWorkspace?.memberCount ?? 0) === 1 ? 'member' : 'members'}
+          </small>
         </span>
       </div>
     </aside>

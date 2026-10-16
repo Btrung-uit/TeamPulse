@@ -1,6 +1,7 @@
 # Milestone 1 foundation ERD
 
-This diagram documents the relational foundation introduced by `TP-010`.
+This diagram documents the relational foundation introduced by `TP-010` and
+the activity history added by `TP-012`.
 `Workspace` is the tenant boundary; composite foreign keys carry that boundary
 into project and sprint ownership.
 
@@ -13,6 +14,8 @@ erDiagram
     WORKSPACE_MEMBER ||--o{ PROJECT : creates
     PROJECT ||--o{ SPRINT : plans
     WORKSPACE_MEMBER ||--o{ SPRINT : creates
+    WORKSPACE ||--o{ ACTIVITY_LOG : records
+    USER ||--o{ ACTIVITY_LOG : acts
 
     USER {
         uniqueidentifier Id PK
@@ -64,6 +67,19 @@ erDiagram
         datetimeoffset CreatedAtUtc
         datetimeoffset UpdatedAtUtc
     }
+
+    ACTIVITY_LOG {
+        uniqueidentifier Id PK
+        uniqueidentifier WorkspaceId FK
+        uniqueidentifier ActorUserId FK
+        uniqueidentifier SubjectUserId FK
+        nvarchar Action
+        nvarchar EntityType
+        uniqueidentifier EntityId
+        nvarchar PreviousValue
+        nvarchar NewValue
+        datetimeoffset OccurredAtUtc
+    }
 ```
 
 ## Enforced invariants
@@ -78,3 +94,4 @@ erDiagram
 - Workspace-owned entities are protected by EF Core query filters. Code that
   intentionally crosses workspaces must explicitly opt out and perform its own
   authorization check.
+- Membership mutations append immutable `ActivityLog` rows in the same save.
