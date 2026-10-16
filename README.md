@@ -4,7 +4,7 @@
 >
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
-![Status](https://img.shields.io/badge/status-foundation-C9A24A)
+![Status](https://img.shields.io/badge/status-application%20shell-C9A24A)
 [![CI](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
@@ -210,7 +210,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-TP-004 đã bổ sung CI tự động cho backend/frontend và quality gate tổng hợp. SQL Server local, EF Core connection và health checks live/ready đã sẵn sàng; schema nghiệp vụ, migrations, authentication và feature modules chưa được triển khai.
+TP-005 đã bổ sung design tokens sáng/tối, React Router, TanStack Query, error boundaries và application shell responsive theo hướng desktop-first. CI, SQL Server local, EF Core connection và health checks live/ready đã sẵn sàng; UI primitives, schema nghiệp vụ, migrations, authentication và feature modules chưa được triển khai.
 
 ## Project Brain
 
@@ -316,7 +316,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-TP-004 adds automated backend/frontend CI and an aggregate quality gate. Local SQL Server, the EF Core connection, and separate live/ready health checks are ready; domain schema, migrations, authentication, and feature modules are not implemented yet.
+TP-005 adds light/dark design tokens, React Router, TanStack Query, error boundaries, and a responsive desktop-first application shell. CI, local SQL Server, the EF Core connection, and separate live/ready health checks are ready; UI primitives, domain schema, migrations, authentication, and feature modules are not implemented yet.
 
 ## Documentation
 
