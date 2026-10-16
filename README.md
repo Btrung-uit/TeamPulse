@@ -4,7 +4,7 @@
 >
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
-![Status](https://img.shields.io/badge/status-project%20workflow-C9A24A)
+![Status](https://img.shields.io/badge/status-tenant%20isolation-C9A24A)
 [![CI](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
@@ -222,7 +222,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-TP-013 bổ sung project CRUD/soft-archive theo workspace, project list với empty/search/archive state, project switcher dùng dữ liệu thật và URL context dạng `/workspaces/{workspaceId}/projects/{projectId}`. Active workspace membership cho phép đọc project; chỉ `Leader` được tạo, sửa hoặc archive, và các mutation đều ghi `ActivityLog`.
+TP-014 hoàn tất quality gate của Milestone 1 bằng integration test cho authentication, role và tenant boundary. Suite dựng hai workspace độc lập, kiểm tra list/detail/mutation chéo tenant, phủ toàn bộ project mutation của `Member`/`Advisor`, và chứng minh token hiện có luôn dùng role/membership mới nhất từ database.
 
 ## Project Brain
 
@@ -340,7 +340,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-TP-013 adds workspace-scoped project CRUD/soft archive, a project list with empty/search/archive states, a data-backed project switcher, and URL context at `/workspaces/{workspaceId}/projects/{projectId}`. Active workspace membership grants project reads; only Leaders can create, update, or archive, and each mutation appends an immutable `ActivityLog` entry.
+TP-014 completes the Milestone 1 quality gate with integration coverage for authentication, roles, and tenant boundaries. The suite creates two isolated workspaces, verifies cross-tenant list/detail/mutation behavior, covers every project mutation for Members and Advisors, and proves existing tokens always use the latest database role and membership state.
 
 ## Documentation
 

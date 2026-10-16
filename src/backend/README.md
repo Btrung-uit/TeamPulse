@@ -84,3 +84,13 @@ Member mutations create immutable `ActivityLog` rows. The API prevents demoting 
 - `POST /api/workspaces/{workspaceId}/projects/{projectId}/archive`: soft-archive a project; Leader only and idempotent.
 
 Project create, update, and archive operations append immutable `ActivityLog` rows. Archived projects retain their history and cannot be updated. Project visibility is workspace-wide in the MVP; there is no separate project-membership model.
+
+## Tenant and identity integration coverage
+
+`TenantIdentityBoundaryTests` protects the Milestone 1 security boundary:
+
+- anonymous and malformed Bearer requests receive `401` on tenant endpoints;
+- a Leader from Workspace A receives `403` when addressing Workspace B and cannot list, read, create, update, archive, or change membership there;
+- a foreign `projectId` disguised under an authorized Workspace A route returns `404` and cannot be mutated;
+- `Member` and `Advisor` can read projects but receive `403` for project and membership mutations;
+- authorization reads the current database membership on every request, so role demotion and membership deactivation take effect without issuing a new JWT.
