@@ -15,6 +15,12 @@ internal sealed class SprintConfiguration : IEntityTypeConfiguration<Sprint>
                 "[EndsOn] >= [StartsOn]"));
 
         builder.HasKey(sprint => sprint.Id);
+        builder.HasAlternateKey(sprint => new
+        {
+            sprint.WorkspaceId,
+            sprint.ProjectId,
+            sprint.Id,
+        });
         builder.Property(sprint => sprint.Id).ValueGeneratedNever();
 
         builder.Property(sprint => sprint.Name)
