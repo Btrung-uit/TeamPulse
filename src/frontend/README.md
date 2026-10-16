@@ -1,9 +1,8 @@
 # TeamPulse frontend
 
 React + TypeScript client for the TeamPulse project workspace. TP-005 provides
-the design-system foundation, application providers, route boundaries, and the
-responsive application shell; reusable UI primitives are intentionally reserved
-for TP-006.
+the design-system foundation and responsive application shell. TP-006 adds the
+reusable, accessible primitives used by subsequent product features.
 
 ## Runtime foundation
 
@@ -39,6 +38,25 @@ for TP-006.
 
 Feature-specific components and types should remain inside their feature instead of being moved into global folders prematurely.
 
+## UI primitives
+
+Reusable components are exported from `src/components/ui/index.ts`:
+
+- `Button`: primary, secondary, ghost, danger, link and icon-only variants with
+  three sizes, loading and disabled states.
+- `Input` and `Textarea`: visible labels, helper/error association, optional
+  icons/actions, read-only, disabled and searching states.
+- `StatusBadge`: the canonical task-status mapping with icon and text.
+- `Modal`: portal rendering, focus trap, Escape/backdrop handling, focus restore
+  and mobile bottom-sheet behavior.
+- `ToastProvider` and `useToast`: five semantic variants, at most three visible
+  notifications, appropriate timeouts and live-region announcements.
+- `EmptyState`, `TaskCard` and generic `Table`: responsive workflow and
+  data-display foundations, including skeleton/empty states and mobile cards.
+
+Open `/dev/components` during development to review every component and its
+important states in dark/light and desktop/mobile layouts.
+
 ## Commands
 
 ```powershell
@@ -46,6 +64,7 @@ npm ci
 npm run dev
 npm run lint
 npm run format:check
+npm run test
 npm run build
 ```
 
