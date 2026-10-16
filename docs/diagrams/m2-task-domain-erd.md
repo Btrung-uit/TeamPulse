@@ -55,7 +55,7 @@ erDiagram
 - Creator, assignee, and reviewer reference membership in the same workspace.
 - Sprint assignment references a sprint in the same workspace and project.
 - Both dependency endpoints reference tasks in the same workspace and project.
-- A dependency cannot point a task to itself; cycle detection is added in `TP-021`.
+- A dependency cannot point a task to itself; application-level graph traversal rejects direct and indirect cycles before insert.
 - Status, priority, estimate, blocked-state, and archive-state check constraints
   protect persisted data in addition to domain validation.
 - `RowVersion` is the optimistic concurrency token.
