@@ -5,6 +5,7 @@
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
 ![Status](https://img.shields.io/badge/status-foundation-C9A24A)
+[![CI](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
 ![Database](https://img.shields.io/badge/database-SQL%20Server-CC2927)
@@ -197,9 +198,19 @@ Các health endpoint:
 
 Kiểm tra production build của frontend bằng `npm run build`. Dừng hạ tầng local bằng `docker compose down`; named volume giữ lại dữ liệu giữa các lần chạy.
 
+## Continuous Integration
+
+Workflow `CI` chạy trên mọi pull request vào `main`, mọi push lên `main` và khi kích hoạt thủ công. Ba check ổn định là:
+
+- `Backend`: restore, kiểm tra format, build Release và chạy test .NET.
+- `Frontend`: `npm ci`, lint, kiểm tra format và production build.
+- `CI Gate`: chỉ thành công khi cả hai job trên đều thành công.
+
+Workflow chỉ có quyền đọc source code và không sử dụng application secret. Khi repository có collaborator, hãy đặt `CI Gate` làm required status check của `main`.
+
 ## Trạng thái dự án
 
-TP-003 đã bổ sung SQL Server local bằng Docker Compose, khởi tạo database idempotent, EF Core connection và health checks live/ready. Schema nghiệp vụ, migrations, authentication và feature modules chưa được triển khai.
+TP-004 đã bổ sung CI tự động cho backend/frontend và quality gate tổng hợp. SQL Server local, EF Core connection và health checks live/ready đã sẵn sàng; schema nghiệp vụ, migrations, authentication và feature modules chưa được triển khai.
 
 ## Project Brain
 
@@ -293,9 +304,19 @@ Health endpoints:
 
 Verify the frontend production build with `npm run build`. Stop local infrastructure with `docker compose down`; the named volume preserves data between runs.
 
+## Continuous Integration
+
+The `CI` workflow runs for every pull request targeting `main`, every push to `main`, and manual dispatches. Its three stable checks are:
+
+- `Backend`: restore, formatting verification, Release build, and .NET tests.
+- `Frontend`: `npm ci`, lint, formatting verification, and production build.
+- `CI Gate`: succeeds only when both jobs above succeed.
+
+The workflow has read-only source access and does not consume application secrets. Once the repository has collaborators, configure `CI Gate` as a required status check for `main`.
+
 ## Current status
 
-TP-003 adds local SQL Server through Docker Compose, idempotent database initialization, an EF Core connection, and separate live/ready health checks. Domain schema, migrations, authentication, and feature modules are not implemented yet.
+TP-004 adds automated backend/frontend CI and an aggregate quality gate. Local SQL Server, the EF Core connection, and separate live/ready health checks are ready; domain schema, migrations, authentication, and feature modules are not implemented yet.
 
 ## Documentation
 
