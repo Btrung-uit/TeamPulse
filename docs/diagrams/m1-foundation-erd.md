@@ -1,7 +1,8 @@
 # Milestone 1 foundation ERD
 
-This diagram documents the relational foundation introduced by `TP-010` and
-the activity history added by `TP-012`.
+This diagram documents the relational foundation introduced by `TP-010`, the
+activity history added by `TP-012`, and the project workflow activated by
+`TP-013`.
 `Workspace` is the tenant boundary; composite foreign keys carry that boundary
 into project and sprint ownership.
 

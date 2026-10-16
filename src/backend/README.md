@@ -74,3 +74,13 @@ The access token is short-lived and returned in the JSON body. Refresh tokens ar
 - `PATCH /api/workspaces/{workspaceId}/members/{userId}/role`: change a role; Leader only.
 
 Member mutations create immutable `ActivityLog` rows. The API prevents demoting the final active Leader so a workspace cannot lose all administrators.
+
+## Project endpoints
+
+- `GET /api/workspaces/{workspaceId}/projects`: list active projects visible to any active workspace member; use `?includeArchived=true` to include archived projects.
+- `GET /api/workspaces/{workspaceId}/projects/{projectId}`: read one project in the authorized workspace.
+- `POST /api/workspaces/{workspaceId}/projects`: create a project; Leader only.
+- `PUT /api/workspaces/{workspaceId}/projects/{projectId}`: update name and description; Leader only.
+- `POST /api/workspaces/{workspaceId}/projects/{projectId}/archive`: soft-archive a project; Leader only and idempotent.
+
+Project create, update, and archive operations append immutable `ActivityLog` rows. Archived projects retain their history and cannot be updated. Project visibility is workspace-wide in the MVP; there is no separate project-membership model.
