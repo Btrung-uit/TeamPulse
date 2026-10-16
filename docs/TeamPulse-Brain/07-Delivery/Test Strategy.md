@@ -30,4 +30,15 @@ Test tập trung business risk thay vì chỉ tối đa coverage percentage.
 
 Khi thêm resource workspace-scoped mới, suite phải mở rộng cùng ma trận thay vì chỉ test happy path của endpoint mới.
 
+## Milestone 2 planning coverage
+
+`TaskPlanningDomainTests` và `PlanningEndpointsTests` bảo vệ:
+
+- khoảng ngày Sprint và việc không update dở dang khi input sai;
+- CRUD Sprint, task count, gán/bỏ sprint và không xóa Sprint còn task;
+- duplicate dependency idempotent, self-reference/cross-project/cycle bị từ chối;
+- risk codes phản ánh state/deadline hiện tại nhưng không tự thay deadline;
+- `Leader` mutate, `Member`/`Advisor` read-only, foreign workspace `403` và disguised foreign project `404`;
+- planning mutation tạo activity log.
+
 Related: [[Definition of Done]], [[Task Data Integrity]], [[Excel Import Transaction]].

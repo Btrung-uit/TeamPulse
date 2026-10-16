@@ -97,7 +97,22 @@ Todo → InProgress → EvidenceLinked → InReview → Done
 active state ⇄ Blocked (returns only to the previous state)
 ```
 
-Only `InReview` can transition to `Done`, so commit/evidence attachment cannot complete work. `RowVersion` enables optimistic concurrency, archive is separate from workflow status, and hard deletion is allowed only for an unused draft with no related history. Dependency rows reference both tasks through `(WorkspaceId, ProjectId, TaskId)`, preventing cross-workspace and cross-project links at the database boundary. Cycle detection belongs to TP-021.
+Only `InReview` can transition to `Done`, so commit/evidence attachment cannot complete work. `RowVersion` enables optimistic concurrency, archive is separate from workflow status, and hard deletion is allowed only for an unused draft with no related history. Dependency rows reference both tasks through `(WorkspaceId, ProjectId, TaskId)`, preventing cross-workspace and cross-project links at the database boundary.
+
+## Planning endpoints
+
+All routes use `/api/workspaces/{workspaceId}/projects/{projectId}`. Active workspace members can read planning data; only Leaders can mutate it.
+
+- `GET /sprints`: list project sprints and their task counts.
+- `POST /sprints`: create a sprint.
+- `PUT /sprints/{sprintId}`: update its name, goal, and date range.
+- `DELETE /sprints/{sprintId}`: delete an empty sprint; assigned tasks must be removed first.
+- `PUT /tasks/{taskId}/sprint`: assign a task to a same-project sprint, or send `null` to unassign it.
+- `GET /dependencies`: list edges with predecessor/successor UI properties and current risk warnings.
+- `POST /dependencies`: add an idempotent dependency after same-project and cycle checks.
+- `DELETE /dependencies/{predecessorTaskId}/{successorTaskId}`: remove an edge idempotently.
+
+Risk warnings use stable codes: `predecessor_incomplete`, `predecessor_overdue`, and `deadline_conflict`. They are calculated from current task state and dates; the service never moves a deadline automatically. Planning mutations append immutable activity rows.
 
 ## Tenant and identity integration coverage
 

@@ -4,7 +4,7 @@
 >
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
-![Status](https://img.shields.io/badge/status-task%20domain-C9A24A)
+![Status](https://img.shields.io/badge/status-sprint%20planning-C9A24A)
 [![CI](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
@@ -222,7 +222,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-TP-020 mở Milestone 2 với task domain được bảo vệ bằng state machine. `TaskCode` unique theo project; task mang assignee, reviewer, sprint, priority, deadline, estimate và `RowVersion`; dependency dùng khóa ngoại ghép để không thể nối task chéo project. Evidence không thể đưa task thẳng tới `Done`, task đã tham gia workflow không được hard-delete và dữ liệu archive được giữ lại.
+TP-021 bổ sung planning API cho Sprint, gán task vào sprint và dependency graph. Hệ thống chặn self-dependency, dependency chéo project và cycle gián tiếp; successor nhận cảnh báo predecessor chưa xong/quá hạn hoặc deadline xung đột nhưng TeamPulse không tự thay đổi lịch. `Leader` quản trị planning, còn `Member`/`Advisor` chỉ đọc.
 
 ## Project Brain
 
@@ -340,7 +340,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-TP-020 starts Milestone 2 with a state-machine-protected task domain. Task codes are unique per project; tasks carry assignment, review, sprint, priority, deadline, estimate, and `RowVersion`; composite dependency keys prevent cross-project links. Evidence cannot move a task directly to `Done`, workflow history prevents hard deletion, and archived records are retained.
+TP-021 adds planning APIs for sprint CRUD, task-to-sprint assignment, and the dependency graph. Self-references, cross-project links, and indirect cycles are rejected. Successors receive incomplete, overdue, and deadline-conflict warnings without TeamPulse automatically rescheduling work. Leaders manage planning while Members and Advisors have read-only access.
 
 ## Documentation
 
