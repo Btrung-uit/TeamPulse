@@ -245,6 +245,158 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TeamPulse.Domain.Tasks.ProjectTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ArchivedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid?>("AssigneeUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(17)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(17)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(5000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly?>("DueOn")
+                        .HasColumnType("date");
+
+                    b.Property<decimal?>("EstimateHours")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<bool>("HasStartedWorkflow")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ReviewerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid?>("SprintId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<string>("StatusBeforeBlocked")
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("nvarchar(240)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "CreatedByUserId");
+
+                    b.HasIndex("WorkspaceId", "ReviewerUserId");
+
+                    b.HasIndex("WorkspaceId", "AssigneeUserId", "Status");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "SprintId");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "IsArchived", "Status", "DueOn");
+
+                    b.ToTable("Tasks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Tasks_ArchiveState", "([IsArchived] = 0 AND [ArchivedAtUtc] IS NULL) OR ([IsArchived] = 1 AND [ArchivedAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Tasks_BlockedState", "([Status] = 'Blocked' AND [StatusBeforeBlocked] IS NOT NULL) OR ([Status] <> 'Blocked' AND [StatusBeforeBlocked] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Tasks_EstimateHours", "[EstimateHours] IS NULL OR ([EstimateHours] > 0 AND [EstimateHours] <= 9999.99)");
+
+                            t.HasCheckConstraint("CK_Tasks_Priority", "[Priority] IN ('Low', 'Medium', 'High', 'Urgent')");
+
+                            t.HasCheckConstraint("CK_Tasks_Status", "[Status] IN ('Todo', 'InProgress', 'EvidenceLinked', 'InReview', 'NeedsChanges', 'Blocked', 'Done')");
+                        });
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Tasks.TaskDependency", b =>
+                {
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PredecessorTaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SuccessorTaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.HasKey("WorkspaceId", "ProjectId", "PredecessorTaskId", "SuccessorTaskId");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "SuccessorTaskId");
+
+                    b.ToTable("TaskDependencies", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_TaskDependencies_DifferentTasks", "[PredecessorTaskId] <> [SuccessorTaskId]");
+                        });
+                });
+
             modelBuilder.Entity("TeamPulse.Domain.Users.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -564,6 +716,69 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.Navigation("Project");
                 });
 
+            modelBuilder.Entity("TeamPulse.Domain.Tasks.ProjectTask", b =>
+                {
+                    b.HasOne("TeamPulse.Domain.Workspaces.WorkspaceMember", "AssigneeMember")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "AssigneeUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TeamPulse.Domain.Workspaces.WorkspaceMember", "CreatedByMember")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeamPulse.Domain.Projects.Project", "Project")
+                        .WithMany("Tasks")
+                        .HasForeignKey("WorkspaceId", "ProjectId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TeamPulse.Domain.Workspaces.WorkspaceMember", "ReviewerMember")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ReviewerUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TeamPulse.Domain.Projects.Sprint", "Sprint")
+                        .WithMany("Tasks")
+                        .HasForeignKey("WorkspaceId", "ProjectId", "SprintId")
+                        .HasPrincipalKey("WorkspaceId", "ProjectId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AssigneeMember");
+
+                    b.Navigation("CreatedByMember");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("ReviewerMember");
+
+                    b.Navigation("Sprint");
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Tasks.TaskDependency", b =>
+                {
+                    b.HasOne("TeamPulse.Domain.Tasks.ProjectTask", "PredecessorTask")
+                        .WithMany("SuccessorDependencies")
+                        .HasForeignKey("WorkspaceId", "ProjectId", "PredecessorTaskId")
+                        .HasPrincipalKey("WorkspaceId", "ProjectId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeamPulse.Domain.Tasks.ProjectTask", "SuccessorTask")
+                        .WithMany("PredecessorDependencies")
+                        .HasForeignKey("WorkspaceId", "ProjectId", "SuccessorTaskId")
+                        .HasPrincipalKey("WorkspaceId", "ProjectId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PredecessorTask");
+
+                    b.Navigation("SuccessorTask");
+                });
+
             modelBuilder.Entity("TeamPulse.Domain.Workspaces.Workspace", b =>
                 {
                     b.HasOne("TeamPulse.Domain.Users.User", "CreatedByUser")
@@ -619,6 +834,20 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("TeamPulse.Domain.Projects.Project", b =>
                 {
                     b.Navigation("Sprints");
+
+                    b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Projects.Sprint", b =>
+                {
+                    b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Tasks.ProjectTask", b =>
+                {
+                    b.Navigation("PredecessorDependencies");
+
+                    b.Navigation("SuccessorDependencies");
                 });
 
             modelBuilder.Entity("TeamPulse.Domain.Users.User", b =>

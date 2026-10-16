@@ -4,7 +4,7 @@
 >
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
-![Status](https://img.shields.io/badge/status-tenant%20isolation-C9A24A)
+![Status](https://img.shields.io/badge/status-task%20domain-C9A24A)
 [![CI](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
@@ -222,7 +222,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-TP-014 hoàn tất quality gate của Milestone 1 bằng integration test cho authentication, role và tenant boundary. Suite dựng hai workspace độc lập, kiểm tra list/detail/mutation chéo tenant, phủ toàn bộ project mutation của `Member`/`Advisor`, và chứng minh token hiện có luôn dùng role/membership mới nhất từ database.
+TP-020 mở Milestone 2 với task domain được bảo vệ bằng state machine. `TaskCode` unique theo project; task mang assignee, reviewer, sprint, priority, deadline, estimate và `RowVersion`; dependency dùng khóa ngoại ghép để không thể nối task chéo project. Evidence không thể đưa task thẳng tới `Done`, task đã tham gia workflow không được hard-delete và dữ liệu archive được giữ lại.
 
 ## Project Brain
 
@@ -340,7 +340,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-TP-014 completes the Milestone 1 quality gate with integration coverage for authentication, roles, and tenant boundaries. The suite creates two isolated workspaces, verifies cross-tenant list/detail/mutation behavior, covers every project mutation for Members and Advisors, and proves existing tokens always use the latest database role and membership state.
+TP-020 starts Milestone 2 with a state-machine-protected task domain. Task codes are unique per project; tasks carry assignment, review, sprint, priority, deadline, estimate, and `RowVersion`; composite dependency keys prevent cross-project links. Evidence cannot move a task directly to `Done`, workflow history prevents hard deletion, and archived records are retained.
 
 ## Documentation
 
