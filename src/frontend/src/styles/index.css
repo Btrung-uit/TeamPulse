@@ -1,4 +1,6 @@
 @import './tokens.css';
 @import './global.css';
+@import './components.css';
 @import './shell.css';
 @import './dashboard.css';
+@import './component-showcase.css';

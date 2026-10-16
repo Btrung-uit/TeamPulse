@@ -4,7 +4,7 @@
 >
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
-![Status](https://img.shields.io/badge/status-application%20shell-C9A24A)
+![Status](https://img.shields.io/badge/status-component%20system-C9A24A)
 [![CI](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
@@ -203,14 +203,14 @@ Kiểm tra production build của frontend bằng `npm run build`. Dừng hạ t
 Workflow `CI` chạy trên mọi pull request vào `main`, mọi push lên `main` và khi kích hoạt thủ công. Ba check ổn định là:
 
 - `Backend`: restore, kiểm tra format, build Release và chạy test .NET.
-- `Frontend`: `npm ci`, lint, kiểm tra format và production build.
+- `Frontend`: `npm ci`, lint, kiểm tra format, component tests và production build.
 - `CI Gate`: chỉ thành công khi cả hai job trên đều thành công.
 
 Workflow chỉ có quyền đọc source code và không sử dụng application secret. Khi repository có collaborator, hãy đặt `CI Gate` làm required status check của `main`.
 
 ## Trạng thái dự án
 
-TP-005 đã bổ sung design tokens sáng/tối, React Router, TanStack Query, error boundaries và application shell responsive theo hướng desktop-first. CI, SQL Server local, EF Core connection và health checks live/ready đã sẵn sàng; UI primitives, schema nghiệp vụ, migrations, authentication và feature modules chưa được triển khai.
+TP-006 đã bổ sung 8 UI primitives tái sử dụng, route trình diễn component, responsive states và automated component tests. Design system, application shell, CI, SQL Server local, EF Core connection và health checks live/ready đã sẵn sàng; schema nghiệp vụ, migrations, authentication và feature modules chưa được triển khai.
 
 ## Project Brain
 
@@ -309,14 +309,14 @@ Verify the frontend production build with `npm run build`. Stop local infrastruc
 The `CI` workflow runs for every pull request targeting `main`, every push to `main`, and manual dispatches. Its three stable checks are:
 
 - `Backend`: restore, formatting verification, Release build, and .NET tests.
-- `Frontend`: `npm ci`, lint, formatting verification, and production build.
+- `Frontend`: `npm ci`, lint, formatting verification, component tests, and production build.
 - `CI Gate`: succeeds only when both jobs above succeed.
 
 The workflow has read-only source access and does not consume application secrets. Once the repository has collaborators, configure `CI Gate` as a required status check for `main`.
 
 ## Current status
 
-TP-005 adds light/dark design tokens, React Router, TanStack Query, error boundaries, and a responsive desktop-first application shell. CI, local SQL Server, the EF Core connection, and separate live/ready health checks are ready; UI primitives, domain schema, migrations, authentication, and feature modules are not implemented yet.
+TP-006 adds eight reusable UI primitives, a component showcase route, responsive states, and automated component tests. The design system, application shell, CI, local SQL Server, EF Core connection, and separate live/ready health checks are ready; domain schema, migrations, authentication, and feature modules are not implemented yet.
 
 ## Documentation
 

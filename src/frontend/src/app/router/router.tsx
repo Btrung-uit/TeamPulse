@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import { RouteErrorBoundary } from '@/app/errors/RouteErrorBoundary'
 import { AppShell } from '@/app/layouts/AppShell'
+import { ComponentShowcaseRoute } from '@/app/router/ComponentShowcaseRoute'
 import { DashboardRoute } from '@/app/router/DashboardRoute'
 import { NotFoundPage } from '@/features/shell/pages/NotFoundPage'
 import { PlaceholderPage } from '@/features/shell/pages/PlaceholderPage'
@@ -85,6 +86,10 @@ export const router = createBrowserRouter([
             description="Secondary mobile destinations will be grouped here without exposing high-risk admin actions."
           />
         ),
+      },
+      {
+        path: 'dev/components',
+        element: <ComponentShowcaseRoute />,
       },
       {
         path: '*',

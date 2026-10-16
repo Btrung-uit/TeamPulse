@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   ListChecks,
   MoreHorizontal,
+  Palette,
   Presentation,
   type LucideIcon,
 } from 'lucide-react'
@@ -55,6 +56,16 @@ export const desktopNavigation: NavigationGroup[] = [
         label: 'Presentation mode',
         to: '/presentation',
         icon: Presentation,
+      },
+    ],
+  },
+  {
+    label: 'Development',
+    items: [
+      {
+        label: 'UI components',
+        to: '/dev/components',
+        icon: Palette,
       },
     ],
   },
