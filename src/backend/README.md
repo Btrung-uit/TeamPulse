@@ -50,7 +50,7 @@ dotnet user-secrets set --project src/backend/TeamPulse.Api `
 
 Use `/health` or `/health/live` for liveness and `/health/ready` for SQL Server readiness. `/api` returns basic API metadata.
 
-`TeamPulseDbContext` contains the `User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, and immutable `ActivityLog` schema. Its migrations live under `TeamPulse.Infrastructure/Persistence/Migrations`.
+`TeamPulseDbContext` contains the `User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, `ProjectTask`, `TaskDependency`, and immutable `ActivityLog` schema. Its migrations live under `TeamPulse.Infrastructure/Persistence/Migrations`.
 
 Workspace-owned entity queries are denied until a scoped `WorkspaceScope` is selected. The `WorkspaceMember` and `WorkspaceLeader` policies load an active membership from the database before selecting that scope. Any future query that deliberately bypasses the filters must explicitly use `IgnoreQueryFilters()` and perform an equivalent authorization check.
 
@@ -84,6 +84,20 @@ Member mutations create immutable `ActivityLog` rows. The API prevents demoting 
 - `POST /api/workspaces/{workspaceId}/projects/{projectId}/archive`: soft-archive a project; Leader only and idempotent.
 
 Project create, update, and archive operations append immutable `ActivityLog` rows. Archived projects retain their history and cannot be updated. Project visibility is workspace-wide in the MVP; there is no separate project-membership model.
+
+## Task domain
+
+The CLR entity is named `ProjectTask` to avoid ambiguity with .NET's asynchronous `Task`; the product, database table, and API language remain **Task**. A normalized `TaskCode` such as `TP-123` is unique inside a project.
+
+The lifecycle is enforced in the domain:
+
+```text
+Todo → InProgress → EvidenceLinked → InReview → Done
+                                  ↘ NeedsChanges
+active state ⇄ Blocked (returns only to the previous state)
+```
+
+Only `InReview` can transition to `Done`, so commit/evidence attachment cannot complete work. `RowVersion` enables optimistic concurrency, archive is separate from workflow status, and hard deletion is allowed only for an unused draft with no related history. Dependency rows reference both tasks through `(WorkspaceId, ProjectId, TaskId)`, preventing cross-workspace and cross-project links at the database boundary. Cycle detection belongs to TP-021.
 
 ## Tenant and identity integration coverage
 

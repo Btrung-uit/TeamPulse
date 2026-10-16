@@ -10,16 +10,16 @@ updated: 2026-10-16
 
 # Entity Catalog
 
-Các entity đã triển khai qua `TP-010` đến `TP-013`:
+Các entity đã triển khai qua `TP-010` đến `TP-020`:
 
-`User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, `ActivityLog`.
+`User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, `ActivityLog`, `ProjectTask` (Task trong domain sản phẩm), `TaskDependency`.
 
 Các entity dự kiến cho các milestone tiếp theo:
 
-`Task`, `TaskDependency`, `TaskEvidence`, `TaskComment`, `Resource`, `ImportBatch`, `ImportRow`, `Notification`.
+`TaskEvidence`, `TaskComment`, `Resource`, `ImportBatch`, `ImportRow`, `Notification`.
 
 Phase 2 thêm `ConnectedRepository`, `GitHubDelivery`, `PullRequestSnapshot`, `CommitEvidence` và integration credentials.
 
-Workspace là tenant boundary. Project và Sprint mang `WorkspaceId`; khóa ngoại ghép bảo đảm creator/member và project/sprint không thể tham chiếu xuyên workspace. Chi tiết cardinality và constraint nằm tại `docs/diagrams/m1-foundation-erd.md`.
+Workspace là tenant boundary. Project, Sprint, Task và TaskDependency mang `WorkspaceId`; khóa ngoại ghép bảo đảm creator/member, project/sprint và dependency không thể tham chiếu xuyên workspace hoặc project. Chi tiết nền M1 nằm tại `docs/diagrams/m1-foundation-erd.md`; task aggregate nằm tại `docs/diagrams/m2-task-domain-erd.md`.
 
 Related: [[Workspace Data Ownership]], [[Open Questions]].
