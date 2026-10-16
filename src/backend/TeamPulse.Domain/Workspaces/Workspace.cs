@@ -1,4 +1,5 @@
 using TeamPulse.Domain.Common;
+using TeamPulse.Domain.Activities;
 using TeamPulse.Domain.Projects;
 using TeamPulse.Domain.Users;
 
@@ -31,6 +32,8 @@ public sealed class Workspace : AuditableEntity
     public User CreatedByUser { get; private set; } = null!;
 
     public ICollection<WorkspaceMember> Members { get; } = [];
+
+    public ICollection<ActivityLog> Activities { get; } = [];
 
     public ICollection<Project> Projects { get; } = [];
 
