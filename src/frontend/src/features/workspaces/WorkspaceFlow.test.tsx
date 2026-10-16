@@ -34,6 +34,7 @@ function workspaceContext(
     currentWorkspace: null,
     error: null,
     createWorkspace: vi.fn(),
+    selectWorkspace: vi.fn(),
     reload: vi.fn(),
     ...overrides,
   }

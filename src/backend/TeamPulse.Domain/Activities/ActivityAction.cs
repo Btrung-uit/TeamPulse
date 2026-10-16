@@ -5,4 +5,7 @@ public enum ActivityAction
     WorkspaceCreated,
     WorkspaceMemberAdded,
     WorkspaceMemberRoleChanged,
+    ProjectCreated,
+    ProjectUpdated,
+    ProjectArchived,
 }

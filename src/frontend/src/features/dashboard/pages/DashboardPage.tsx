@@ -8,6 +8,9 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { projectPath } from '@/features/projects/projectPaths'
+import { useProject } from '@/features/projects/useProject'
+import { useWorkspace } from '@/features/workspaces/useWorkspace'
 
 const metrics = [
   {
@@ -86,15 +89,19 @@ const recentActivity = [
 ]
 
 function DashboardPage() {
+  const { currentWorkspace } = useWorkspace()
+  const { currentProject } = useProject()
+  const projectBase = projectPath(currentWorkspace!.id, currentProject!.id)
+
   return (
     <div className="dashboard-page">
       <header className="page-header">
         <div>
-          <p className="eyebrow">CampusEvent · Sprint 03</p>
+          <p className="eyebrow">{currentProject!.name} · Sprint 03</p>
           <h1>Good morning, Trung.</h1>
           <p>Here is what needs attention across your project today.</p>
         </div>
-        <Link className="page-header__action" to="/my-tasks">
+        <Link className="page-header__action" to={`${projectBase}/my-tasks`}>
           View my tasks
           <ArrowUpRight aria-hidden="true" size={17} />
         </Link>
@@ -205,7 +212,7 @@ function DashboardPage() {
               <p className="eyebrow">Focus</p>
               <h2>My priority tasks</h2>
             </div>
-            <Link to="/my-tasks">View all</Link>
+            <Link to={`${projectBase}/my-tasks`}>View all</Link>
           </div>
           <div className="priority-list">
             {priorityTasks.map((task) => (

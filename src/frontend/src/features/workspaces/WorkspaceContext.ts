@@ -10,6 +10,7 @@ export interface WorkspaceContextValue {
   currentWorkspace: WorkspaceSummary | null
   error: string | null
   createWorkspace: (name: string) => Promise<WorkspaceSummary>
+  selectWorkspace: (workspaceId: string) => void
   reload: () => Promise<void>
 }
 

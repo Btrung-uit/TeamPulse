@@ -10,7 +10,7 @@ updated: 2026-10-16
 
 # Entity Catalog
 
-Các entity đã triển khai qua `TP-010` và `TP-012`:
+Các entity đã triển khai qua `TP-010` đến `TP-013`:
 
 `User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, `ActivityLog`.
 

@@ -10,12 +10,14 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using TeamPulse.Application.Authentication;
 using TeamPulse.Application.Common.Interfaces;
+using TeamPulse.Application.Projects;
 using TeamPulse.Application.Workspaces;
 using TeamPulse.Domain.Workspaces;
 using TeamPulse.Infrastructure.Authorization;
 using TeamPulse.Infrastructure.Identity;
 using TeamPulse.Infrastructure.Multitenancy;
 using TeamPulse.Infrastructure.Persistence;
+using TeamPulse.Infrastructure.Projects;
 using TeamPulse.Infrastructure.Workspaces;
 
 namespace TeamPulse.Infrastructure;
@@ -108,6 +110,7 @@ public static class DependencyInjection
         services.AddScoped<TokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IWorkspaceService, WorkspaceService>();
+        services.AddScoped<IProjectService, ProjectService>();
 
         return services;
     }

@@ -23,57 +23,115 @@ export interface NavigationGroup {
   items: NavigationItem[]
 }
 
-export const desktopNavigation: NavigationGroup[] = [
-  {
-    label: 'Overview',
-    items: [{ label: 'Dashboard', to: '/', icon: LayoutDashboard, end: true }],
-  },
-  {
-    label: 'Work',
-    items: [
-      { label: 'Task board', to: '/tasks', icon: ListChecks },
-      { label: 'My tasks', to: '/my-tasks', icon: ClipboardCheck },
-    ],
-  },
-  {
-    label: 'Engineering',
-    items: [
-      {
-        label: 'PR waiting room',
-        to: '/engineering/pull-requests',
-        icon: GitPullRequest,
-      },
-    ],
-  },
-  {
-    label: 'Resources',
-    items: [{ label: 'Resource hub', to: '/resources', icon: FolderOpen }],
-  },
-  {
-    label: 'Presentation',
-    items: [
-      {
-        label: 'Presentation mode',
-        to: '/presentation',
-        icon: Presentation,
-      },
-    ],
-  },
-  {
-    label: 'Development',
-    items: [
-      {
-        label: 'UI components',
-        to: '/dev/components',
-        icon: Palette,
-      },
-    ],
-  },
-]
+export function desktopNavigation(
+  workspaceId: string,
+  projectId?: string,
+): NavigationGroup[] {
+  const projectBase = projectId
+    ? `/workspaces/${workspaceId}/projects/${projectId}`
+    : undefined
 
-export const mobileNavigation: NavigationItem[] = [
-  { label: 'Home', to: '/', icon: LayoutDashboard, end: true },
-  { label: 'Tasks', to: '/my-tasks', icon: ClipboardCheck },
-  { label: 'Inbox', to: '/inbox', icon: Inbox },
-  { label: 'More', to: '/more', icon: MoreHorizontal },
-]
+  return [
+    {
+      label: 'Overview',
+      items: [
+        {
+          label: 'Projects',
+          to: `/workspaces/${workspaceId}/projects`,
+          icon: LayoutDashboard,
+          end: true,
+        },
+        ...(projectBase
+          ? [
+              {
+                label: 'Dashboard',
+                to: projectBase,
+                icon: LayoutDashboard,
+                end: true,
+              },
+            ]
+          : []),
+      ],
+    },
+    ...(projectBase
+      ? [
+          {
+            label: 'Work',
+            items: [
+              {
+                label: 'Task board',
+                to: `${projectBase}/tasks`,
+                icon: ListChecks,
+              },
+              {
+                label: 'My tasks',
+                to: `${projectBase}/my-tasks`,
+                icon: ClipboardCheck,
+              },
+            ],
+          },
+          {
+            label: 'Engineering',
+            items: [
+              {
+                label: 'PR waiting room',
+                to: `${projectBase}/engineering/pull-requests`,
+                icon: GitPullRequest,
+              },
+            ],
+          },
+          {
+            label: 'Resources',
+            items: [
+              {
+                label: 'Resource hub',
+                to: `${projectBase}/resources`,
+                icon: FolderOpen,
+              },
+            ],
+          },
+          {
+            label: 'Presentation',
+            items: [
+              {
+                label: 'Presentation mode',
+                to: `${projectBase}/presentation`,
+                icon: Presentation,
+              },
+            ],
+          },
+        ]
+      : []),
+    {
+      label: 'Development',
+      items: [
+        {
+          label: 'UI components',
+          to: `/workspaces/${workspaceId}/dev/components`,
+          icon: Palette,
+        },
+      ],
+    },
+  ]
+}
+
+export function mobileNavigation(
+  workspaceId: string,
+  projectId?: string,
+): NavigationItem[] {
+  const projectList = `/workspaces/${workspaceId}/projects`
+  if (!projectId) {
+    return [
+      { label: 'Projects', to: projectList, icon: LayoutDashboard, end: true },
+    ]
+  }
+
+  const projectBase = `${projectList}/${projectId}`
+
+  return [
+    { label: 'Home', to: projectBase, icon: LayoutDashboard, end: true },
+    { label: 'Tasks', to: `${projectBase}/my-tasks`, icon: ClipboardCheck },
+    { label: 'Inbox', to: `${projectBase}/inbox`, icon: Inbox },
+    { label: 'More', to: `${projectBase}/more`, icon: MoreHorizontal },
+  ]
+}
