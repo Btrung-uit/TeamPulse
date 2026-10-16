@@ -170,6 +170,12 @@ dotnet user-secrets set --project src/backend/TeamPulse.Api `
   "ConnectionStrings:TeamPulse" `
   "Server=localhost,1433;Database=TeamPulse;User Id=sa;Password=<your-password>;TrustServerCertificate=True"
 
+# Tạo JWT signing key ngẫu nhiên; chỉ lưu bằng User Secrets.
+$jwtSigningKey = [Convert]::ToBase64String(
+  [Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+dotnet user-secrets set --project src/backend/TeamPulse.Api `
+  "Authentication:Jwt:SigningKey" $jwtSigningKey
+
 # Cài local tool và áp dụng EF Core migrations vào database trống/hiện có.
 dotnet tool restore
 dotnet tool run dotnet-ef database update `
@@ -216,7 +222,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-TP-010 đã bổ sung schema nền `User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, migration đầu tiên, tenant query filters, audit timestamps và ERD. Design system, application shell, CI và SQL Server local đã sẵn sàng; authentication, membership endpoints và các feature module tiếp theo chưa được triển khai.
+TP-011 đã bổ sung ASP.NET Core Identity, JWT access token, rotating refresh session, register/login/logout/current-user API, Login/Register screen và protected routes. Token không được đặt trong URL hoặc browser storage; workspace membership/RBAC sẽ được triển khai trong TP-012.
 
 ## Project Brain
 
@@ -282,6 +288,12 @@ dotnet user-secrets set --project src/backend/TeamPulse.Api `
   "ConnectionStrings:TeamPulse" `
   "Server=localhost,1433;Database=TeamPulse;User Id=sa;Password=<your-password>;TrustServerCertificate=True"
 
+# Generate a random JWT signing key and keep it in User Secrets only.
+$jwtSigningKey = [Convert]::ToBase64String(
+  [Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+dotnet user-secrets set --project src/backend/TeamPulse.Api `
+  "Authentication:Jwt:SigningKey" $jwtSigningKey
+
 # Restore the local tool and apply EF Core migrations to an empty or existing database.
 dotnet tool restore
 dotnet tool run dotnet-ef database update `
@@ -328,7 +340,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-TP-010 adds the `User`, `Workspace`, `WorkspaceMember`, `Project`, and `Sprint` foundation schema, the initial migration, tenant query filters, audit timestamps, and an ERD. The design system, application shell, CI, and local SQL Server are ready; authentication, membership endpoints, and subsequent feature modules are not implemented yet.
+TP-011 adds ASP.NET Core Identity, JWT access tokens, rotating refresh sessions, register/login/logout/current-user APIs, Login/Register screens, and protected routes. Tokens never appear in URLs or browser storage; workspace membership and RBAC follow in TP-012.
 
 ## Documentation
 

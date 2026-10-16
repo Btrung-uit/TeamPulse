@@ -1,10 +1,18 @@
-import { Bell, ChevronDown, Moon, Search, Sun } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Moon, Search, Sun } from 'lucide-react'
 
 import { useTheme } from '@/app/providers/useTheme'
+import { useAuth } from '@/features/auth/useAuth'
 
 export function Topbar() {
   const { theme, toggleTheme } = useTheme()
+  const { user, logout } = useAuth()
   const nextTheme = theme === 'dark' ? 'light' : 'dark'
+  const initials = user?.displayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
 
   return (
     <header className="topbar">
@@ -48,15 +56,21 @@ export function Topbar() {
           )}
         </button>
 
-        <button className="user-menu" type="button" aria-label="Open user menu">
+        <button
+          className="user-menu"
+          type="button"
+          aria-label="Sign out"
+          title="Sign out"
+          onClick={() => void logout()}
+        >
           <span className="user-menu__avatar" aria-hidden="true">
-            BT
+            {initials || 'TP'}
           </span>
           <span className="user-menu__copy">
-            <strong>Bảo Trung</strong>
-            <small>Leader</small>
+            <strong>{user?.displayName ?? 'TeamPulse user'}</strong>
+            <small>{user?.email ?? 'Signed in'}</small>
           </span>
-          <ChevronDown aria-hidden="true" size={16} />
+          <LogOut aria-hidden="true" size={16} />
         </button>
       </div>
     </header>

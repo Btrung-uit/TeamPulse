@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using TeamPulse.Api.Endpoints;
 using TeamPulse.Infrastructure;
 using TeamPulse.Infrastructure.Persistence;
 
@@ -24,6 +25,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = registration => registration.Tags.Contains("live"),
@@ -43,6 +47,8 @@ app.MapGet("/api", () => Results.Ok(new
     status = "running",
 }))
     .WithName("GetApiInfo");
+
+app.MapAuthEndpoints();
 
 app.Run();
 
