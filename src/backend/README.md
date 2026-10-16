@@ -22,8 +22,12 @@ Run from the repository root:
 
 ```powershell
 dotnet restore TeamPulse.sln
+dotnet tool restore
 dotnet build TeamPulse.sln --no-restore
 dotnet test TeamPulse.sln --no-build
+dotnet tool run dotnet-ef database update `
+  --project src/backend/TeamPulse.Infrastructure `
+  --startup-project src/backend/TeamPulse.Api
 dotnet run --project src/backend/TeamPulse.Api
 ```
 
@@ -41,4 +45,6 @@ dotnet user-secrets set --project src/backend/TeamPulse.Api `
 
 Use `/health` or `/health/live` for liveness and `/health/ready` for SQL Server readiness. `/api` returns basic API metadata.
 
-`TeamPulseDbContext` intentionally has no domain schema yet. Entities and the first migration belong to TP-010.
+`TeamPulseDbContext` contains the `User`, `Workspace`, `WorkspaceMember`, `Project`, and `Sprint` foundation schema. Its migrations live under `TeamPulse.Infrastructure/Persistence/Migrations`.
+
+Workspace-owned entity queries are denied until a scoped `WorkspaceScope` is selected. The normal HTTP resolver will be added with authentication and membership in TP-011/TP-012. Any future query that deliberately bypasses the filters must explicitly use `IgnoreQueryFilters()` and perform an equivalent authorization check.

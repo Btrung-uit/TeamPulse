@@ -4,7 +4,7 @@
 >
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
-![Status](https://img.shields.io/badge/status-component%20system-C9A24A)
+![Status](https://img.shields.io/badge/status-foundation%20schema-C9A24A)
 [![CI](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
@@ -30,7 +30,7 @@ Task → Evidence → Review → Contribution Report → Presentation
 
 - **Leader:** lập kế hoạch, phân công, theo dõi rủi ro và xác nhận đóng góp.
 - **Member:** theo dõi công việc cá nhân, cập nhật tiến độ và gắn minh chứng.
-- **Advisor/Viewer:** theo dõi tiến độ và xem báo cáo mà không thay đổi dữ liệu vận hành.
+- **Advisor:** theo dõi tiến độ và xem báo cáo mà không thay đổi dữ liệu vận hành.
 
 ## Tính năng chính
 
@@ -169,6 +169,12 @@ docker compose up -d
 dotnet user-secrets set --project src/backend/TeamPulse.Api `
   "ConnectionStrings:TeamPulse" `
   "Server=localhost,1433;Database=TeamPulse;User Id=sa;Password=<your-password>;TrustServerCertificate=True"
+
+# Cài local tool và áp dụng EF Core migrations vào database trống/hiện có.
+dotnet tool restore
+dotnet tool run dotnet-ef database update `
+  --project src/backend/TeamPulse.Infrastructure `
+  --startup-project src/backend/TeamPulse.Api
 ```
 
 Những lần sau, một lệnh `docker compose up -d` sẽ khởi động SQL Server và bảo đảm database `TeamPulse` tồn tại.
@@ -210,7 +216,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-TP-006 đã bổ sung 8 UI primitives tái sử dụng, route trình diễn component, responsive states và automated component tests. Design system, application shell, CI, SQL Server local, EF Core connection và health checks live/ready đã sẵn sàng; schema nghiệp vụ, migrations, authentication và feature modules chưa được triển khai.
+TP-010 đã bổ sung schema nền `User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, migration đầu tiên, tenant query filters, audit timestamps và ERD. Design system, application shell, CI và SQL Server local đã sẵn sàng; authentication, membership endpoints và các feature module tiếp theo chưa được triển khai.
 
 ## Project Brain
 
@@ -236,7 +242,7 @@ Task → Evidence → Review → Contribution Report → Presentation
 
 - **Leader:** plans work, assigns ownership, monitors risks, and confirms contributions.
 - **Member:** tracks personal tasks, reports progress, and attaches evidence.
-- **Advisor/Viewer:** observes progress and reports without changing operational data.
+- **Advisor:** observes progress and reports without changing operational data.
 
 ## Planned capabilities
 
@@ -275,6 +281,12 @@ docker compose up -d
 dotnet user-secrets set --project src/backend/TeamPulse.Api `
   "ConnectionStrings:TeamPulse" `
   "Server=localhost,1433;Database=TeamPulse;User Id=sa;Password=<your-password>;TrustServerCertificate=True"
+
+# Restore the local tool and apply EF Core migrations to an empty or existing database.
+dotnet tool restore
+dotnet tool run dotnet-ef database update `
+  --project src/backend/TeamPulse.Infrastructure `
+  --startup-project src/backend/TeamPulse.Api
 ```
 
 On subsequent runs, the single command `docker compose up -d` starts SQL Server and ensures that the `TeamPulse` database exists.
@@ -316,7 +328,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-TP-006 adds eight reusable UI primitives, a component showcase route, responsive states, and automated component tests. The design system, application shell, CI, local SQL Server, EF Core connection, and separate live/ready health checks are ready; domain schema, migrations, authentication, and feature modules are not implemented yet.
+TP-010 adds the `User`, `Workspace`, `WorkspaceMember`, `Project`, and `Sprint` foundation schema, the initial migration, tenant query filters, audit timestamps, and an ERD. The design system, application shell, CI, and local SQL Server are ready; authentication, membership endpoints, and subsequent feature modules are not implemented yet.
 
 ## Documentation
 
