@@ -72,4 +72,24 @@ public sealed class Sprint : AuditableEntity
     public WorkspaceMember CreatedByMember { get; private set; } = null!;
 
     public ICollection<ProjectTask> Tasks { get; } = [];
+
+    public void UpdateDetails(
+        string name,
+        DateOnly startsOn,
+        DateOnly endsOn,
+        string? goal = null)
+    {
+        if (endsOn < startsOn)
+        {
+            throw new ArgumentException("Sprint end date cannot be before its start date.", nameof(endsOn));
+        }
+
+        var normalizedName = DomainText.Required(name, nameof(name), NameMaximumLength);
+        var normalizedGoal = DomainText.Optional(goal, nameof(goal), GoalMaximumLength);
+
+        Name = normalizedName;
+        Goal = normalizedGoal;
+        StartsOn = startsOn;
+        EndsOn = endsOn;
+    }
 }
