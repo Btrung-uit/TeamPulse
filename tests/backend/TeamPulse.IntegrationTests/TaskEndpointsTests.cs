@@ -170,6 +170,21 @@ public sealed class TaskEndpointsTests : IClassFixture<TeamPulseApiFactory>
             projectId,
             BasicTask("TP-101", assignee.UserId, reviewer.UserId));
 
+        task = await ChangeStatusSuccessAsync(
+            leader.Client,
+            workspaceId,
+            projectId,
+            task,
+            "Blocked");
+        Assert.Equal("Todo", task.StatusBeforeBlocked);
+        task = await ChangeStatusSuccessAsync(
+            leader.Client,
+            workspaceId,
+            projectId,
+            task,
+            "Todo");
+        Assert.Null(task.StatusBeforeBlocked);
+
         var invalid = await ChangeStatusAsync(
             leader.Client,
             workspaceId,
@@ -221,7 +236,7 @@ public sealed class TaskEndpointsTests : IClassFixture<TeamPulseApiFactory>
         await using var scope = _factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<TeamPulseDbContext>();
         Assert.Equal(
-            6,
+            8,
             await dbContext.ActivityLogs
                 .IgnoreQueryFilters()
                 .CountAsync(activity =>
@@ -580,6 +595,7 @@ public sealed class TaskEndpointsTests : IClassFixture<TeamPulseApiFactory>
         string Title,
         string? Description,
         string Status,
+        string? StatusBeforeBlocked,
         string Priority,
         DateOnly? DueOn,
         decimal? EstimateHours,

@@ -36,6 +36,15 @@ export interface TaskSummary {
   rowVersion: string
 }
 
+export interface TaskDetails extends TaskSummary {
+  workspaceId: string
+  projectId: string
+  description: string | null
+  statusBeforeBlocked: TaskStatus | null
+  archivedAtUtc: string | null
+  createdAtUtc: string
+}
+
 export interface PagedTaskResponse {
   items: TaskSummary[]
   page: number
@@ -64,6 +73,46 @@ export interface CreateTaskInput {
   dueOn?: string
   estimateHours?: number
   rowVersion: null
+}
+
+export interface UpdateTaskInput {
+  code: string
+  title: string
+  description?: string
+  assigneeUserId?: string
+  reviewerUserId?: string
+  sprintId?: string
+  priority: TaskPriority
+  dueOn?: string
+  estimateHours?: number
+  rowVersion: string
+}
+
+export interface ChangeTaskStatusInput {
+  status: TaskStatus
+  rowVersion: string
+}
+
+export interface DependencyTask {
+  id: string
+  code: string
+  title: string
+  status: TaskStatus
+  dueOn: string | null
+  isArchived: boolean
+}
+
+export interface DependencyRisk {
+  code: string
+  message: string
+}
+
+export interface TaskDependency {
+  predecessor: DependencyTask
+  successor: DependencyTask
+  isAtRisk: boolean
+  risks: DependencyRisk[]
+  createdAtUtc: string
 }
 
 export interface WorkspaceMemberOption {

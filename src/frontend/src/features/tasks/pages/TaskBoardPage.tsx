@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/Input/Input'
 import { TaskCard } from '@/components/ui/TaskCard/TaskCard'
 import { useProject } from '@/features/projects/useProject'
 import { CreateTaskModal } from '@/features/tasks/components/CreateTaskModal'
+import { TaskDetailPanel } from '@/features/tasks/components/TaskDetailPanel'
 import { TaskSelectField as SelectField } from '@/features/tasks/components/TaskSelectField'
 import {
   dueLabel,
@@ -74,6 +75,7 @@ export function TaskBoardPage() {
   const canManage = currentWorkspace?.role === 'Leader'
   const projectBase = `/workspaces/${workspaceId}/projects/${projectId}`
   const sort = readSort(searchParams.get('sort'))
+  const selectedTaskId = searchParams.get('task') || undefined
   const filters = useMemo<TaskFilters>(
     () => ({
       search: searchParams.get('search')?.trim() || undefined,
@@ -114,6 +116,15 @@ export function TaskBoardPage() {
       ;['search', 'priority', 'assignee', 'sprint'].forEach((key) =>
         next.delete(key),
       )
+      return next
+    })
+  }
+
+  function selectTask(taskId?: string) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (taskId) next.set('task', taskId)
+      else next.delete('task')
       return next
     })
   }
@@ -308,6 +319,8 @@ export function TaskBoardPage() {
                           dueDate={dueLabel(task.dueOn)}
                           overdue={isOverdue(task)}
                           blocked={task.status === 'Blocked'}
+                          selected={selectedTaskId === task.id}
+                          onClick={() => selectTask(task.id)}
                         />
                       )
                     })
@@ -324,6 +337,13 @@ export function TaskBoardPage() {
         workspaceId={workspaceId}
         projectId={projectId}
         onClose={() => setIsCreateOpen(false)}
+      />
+      <TaskDetailPanel
+        taskId={selectedTaskId}
+        workspaceId={workspaceId}
+        projectId={projectId}
+        role={currentWorkspace!.role}
+        onClose={() => selectTask()}
       />
     </div>
   )

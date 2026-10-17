@@ -691,6 +691,7 @@ internal sealed class TaskService(
             task.Title,
             task.Description,
             task.Status,
+            task.StatusBeforeBlocked,
             task.Priority,
             task.DueOn,
             task.EstimateHours,
