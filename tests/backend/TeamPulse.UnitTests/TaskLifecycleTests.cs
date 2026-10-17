@@ -51,6 +51,20 @@ public sealed class TaskLifecycleTests
         Assert.True(task.HasStartedWorkflow);
     }
 
+    [Theory]
+    [InlineData(ProjectTaskStatus.EvidenceLinked)]
+    [InlineData(ProjectTaskStatus.InReview)]
+    [InlineData(ProjectTaskStatus.NeedsChanges)]
+    [InlineData(ProjectTaskStatus.Done)]
+    public void Todo_RejectsSkippedWorkflowTransitions(ProjectTaskStatus targetStatus)
+    {
+        var task = CreateTask();
+
+        Assert.Throws<InvalidOperationException>(() => task.TransitionTo(targetStatus));
+        Assert.Equal(ProjectTaskStatus.Todo, task.Status);
+        Assert.False(task.HasStartedWorkflow);
+    }
+
     [Fact]
     public void EvidenceLinked_CannotTransitionDirectlyToDone()
     {
