@@ -8,7 +8,10 @@ import { Button } from '@/components/ui/Button/Button'
 import { EmptyState } from '@/components/ui/EmptyState/EmptyState'
 import { Input } from '@/components/ui/Input/Input'
 import { Modal } from '@/components/ui/Modal/Modal'
-import { StatusBadge } from '@/components/ui/StatusBadge/StatusBadge'
+import {
+  StatusBadge,
+  type TaskStatus,
+} from '@/components/ui/StatusBadge/StatusBadge'
 import { Table, type TableColumn } from '@/components/ui/Table/Table'
 import { TaskCard } from '@/components/ui/TaskCard/TaskCard'
 import { ToastProvider } from '@/components/ui/Toast/ToastProvider'
@@ -47,10 +50,22 @@ describe('component primitives', () => {
     expect(input).toHaveAttribute('aria-describedby', error.id)
   })
 
-  it('communicates status with an icon and visible text', () => {
-    render(<StatusBadge status="blocked" />)
-    expect(screen.getByText('Blocked')).toBeVisible()
-  })
+  it.each([
+    ['todo', 'Todo'],
+    ['in-progress', 'In progress'],
+    ['evidence-linked', 'Evidence linked'],
+    ['in-review', 'In review'],
+    ['needs-changes', 'Needs changes'],
+    ['blocked', 'Blocked'],
+    ['done', 'Done'],
+    ['archived', 'Archived'],
+  ] satisfies ReadonlyArray<readonly [TaskStatus, string]>)(
+    'communicates the %s status with visible text',
+    (status, label) => {
+      render(<StatusBadge status={status} />)
+      expect(screen.getByText(label)).toBeVisible()
+    },
+  )
 
   it('traps modal behavior, closes with Escape, and restores focus', async () => {
     const user = userEvent.setup()
@@ -171,6 +186,26 @@ describe('component primitives', () => {
       screen.getByRole('button', { name: 'Open TP-021: Build project flow' }),
     )
     expect(onOpen).toHaveBeenCalledOnce()
+  })
+
+  it('surfaces blocked task state ahead of an overdue warning', () => {
+    const { container } = render(
+      <TaskCard
+        code="TP-026"
+        title="Protect work management regressions"
+        status="blocked"
+        priority="urgent"
+        assignee={{ name: 'Bảo Trung', initials: 'BT' }}
+        dueDate="Oct 16"
+        blocked
+        overdue
+      />,
+    )
+
+    expect(screen.getByText('Blocked')).toBeVisible()
+    expect(screen.getByText('Blocked dependency')).toBeVisible()
+    expect(screen.queryByText('Overdue task')).not.toBeInTheDocument()
+    expect(container.querySelector('.ui-task-card')).toHaveClass('is-blocked')
   })
 
   it('keeps table row actions independent from row selection', async () => {

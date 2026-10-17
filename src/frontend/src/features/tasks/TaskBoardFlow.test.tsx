@@ -334,6 +334,56 @@ describe('task board flow', () => {
     expect(await screen.findByText('Build task board')).toBeInTheDocument()
   })
 
+  it('rejects invalid task identity fields before calling the API', async () => {
+    const fetchMock = vi.fn(
+      async (...args: [RequestInfo | URL, RequestInit?]) => {
+        const [input] = args
+        const path = String(input)
+        const optionResponse = optionsResponse(path)
+        if (optionResponse) return optionResponse
+        if (path.includes('/tasks?')) return jsonResponse(taskPage([]))
+        throw new Error(`Unexpected request: ${path}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard()
+
+    const newTaskButtons = await screen.findAllByRole('button', {
+      name: 'New task',
+    })
+    await user.click(newTaskButtons[0])
+    const dialog = screen.getByRole('dialog', { name: 'Create task' })
+    await user.type(within(dialog).getByLabelText('Task code'), 'invalid')
+    const submit = within(dialog).getByRole('button', { name: 'Create task' })
+    await waitFor(() => expect(submit).toBeEnabled())
+    await user.click(submit)
+
+    expect(
+      within(dialog).getByText('Use PREFIX-NUMBER, for example TP-123.'),
+    ).toBeVisible()
+    expect(
+      within(dialog).getByText(
+        'Enter a title with no more than 240 characters.',
+      ),
+    ).toBeVisible()
+    expect(within(dialog).getByLabelText('Task code')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+    expect(within(dialog).getByLabelText('Title')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+    expect(
+      fetchMock.mock.calls.some(
+        ([path, init]) =>
+          String(path).endsWith('/tasks') && init?.method === 'POST',
+      ),
+    ).toBe(false)
+  })
+
   it('keeps creation controls hidden for members', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const path = String(input)
