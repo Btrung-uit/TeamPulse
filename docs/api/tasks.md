@@ -29,6 +29,10 @@ GET /{taskId}
 
 `page` starts at `1`; `pageSize` accepts `1..100`. `search` matches an exact normalized task code when it has the `PREFIX-NUMBER` format, otherwise it searches titles. Archived tasks are excluded unless `includeArchived=true`.
 
+The detail response includes `statusBeforeBlocked` while the task is blocked so
+clients can offer only the valid unblock transition. It is `null` for every
+other status.
+
 ```json
 {
   "items": [],

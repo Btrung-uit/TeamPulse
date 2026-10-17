@@ -12,7 +12,7 @@ import {
 } from '@/features/projects/ProjectContext'
 import type { ProjectSummary } from '@/features/projects/types'
 import { TaskBoardPage } from '@/features/tasks/pages/TaskBoardPage'
-import type { TaskSummary } from '@/features/tasks/types'
+import type { TaskDetails, TaskSummary } from '@/features/tasks/types'
 import type { WorkspaceSummary } from '@/features/workspaces/types'
 import {
   WorkspaceContext,
@@ -70,6 +70,17 @@ const task: TaskSummary = {
   rowVersion: '',
 }
 
+const taskDetails: TaskDetails = {
+  ...task,
+  workspaceId: workspace.id,
+  projectId: project.id,
+  description: 'Ship a focused task board.',
+  statusBeforeBlocked: null,
+  archivedAtUtc: null,
+  createdAtUtc: '2026-10-16T00:00:00Z',
+  rowVersion: 'version-1',
+}
+
 function workspaceContext(role: WorkspaceSummary['role'] = 'Leader') {
   const currentWorkspace = { ...workspace, role }
   return {
@@ -120,7 +131,11 @@ function LocationProbe() {
   )
 }
 
-function renderBoard(role: WorkspaceSummary['role'] = 'Leader') {
+function renderBoard(
+  role: WorkspaceSummary['role'] = 'Leader',
+  initialEntry = '/workspaces/workspace-1/projects/project-1/tasks',
+  authValue: AuthContextValue = authContext,
+) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -131,14 +146,10 @@ function renderBoard(role: WorkspaceSummary['role'] = 'Leader') {
   return render(
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <AuthContext.Provider value={authContext}>
+        <AuthContext.Provider value={authValue}>
           <WorkspaceContext.Provider value={workspaceContext(role)}>
             <ProjectContext.Provider value={projectContext}>
-              <MemoryRouter
-                initialEntries={[
-                  '/workspaces/workspace-1/projects/project-1/tasks',
-                ]}
-              >
+              <MemoryRouter initialEntries={[initialEntry]}>
                 <Routes>
                   <Route
                     path="/workspaces/:workspaceId/projects/:projectId/tasks"
@@ -340,5 +351,227 @@ describe('task board flow', () => {
       screen.queryByRole('button', { name: 'New task' }),
     ).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Import Excel/ })).toBeNull()
+  })
+
+  it('opens task detail from a card and preserves board filters in the URL', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input)
+      const optionResponse = optionsResponse(path)
+      if (optionResponse) return optionResponse
+      if (path.endsWith('/tasks/task-1')) return jsonResponse(taskDetails)
+      if (path.endsWith('/dependencies')) return jsonResponse([])
+      if (path.includes('/tasks?')) return jsonResponse(taskPage([task]))
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?priority=High',
+    )
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Open TP-023: Build task board',
+      }),
+    )
+    expect(
+      await screen.findByRole('dialog', { name: 'TP-023 task details' }),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '?priority=High&task=task-1',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Close task detail' }))
+    expect(
+      screen.queryByRole('dialog', { name: 'TP-023 task details' }),
+    ).toBeNull()
+    expect(screen.getByTestId('location')).toHaveTextContent('?priority=High')
+  })
+
+  it('explains a stale update and retries explicitly with the latest row version', async () => {
+    let getCount = 0
+    const putBodies: unknown[] = []
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const path = String(input)
+        const optionResponse = optionsResponse(path)
+        if (optionResponse) return optionResponse
+        if (path.endsWith('/dependencies')) return jsonResponse([])
+        if (path.endsWith('/tasks/task-1') && init?.method === 'PUT') {
+          putBodies.push(JSON.parse(String(init.body)))
+          if (putBodies.length === 1) {
+            return jsonResponse(
+              { code: 'task_conflict', message: 'Reload and retry.' },
+              409,
+            )
+          }
+          return jsonResponse({
+            ...taskDetails,
+            title: 'Updated by leader',
+            rowVersion: 'version-3',
+          })
+        }
+        if (path.endsWith('/tasks/task-1')) {
+          getCount += 1
+          return jsonResponse({
+            ...taskDetails,
+            rowVersion: getCount > 1 ? 'version-2' : 'version-1',
+          })
+        }
+        if (path.includes('/tasks?')) return jsonResponse(taskPage([task]))
+        throw new Error(`Unexpected request: ${path}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?task=task-1',
+    )
+    const dialog = await screen.findByRole('dialog', {
+      name: 'TP-023 task details',
+    })
+    const title = within(dialog).getByLabelText('Title')
+    await user.clear(title)
+    await user.type(title, 'Updated by leader')
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Save changes' }),
+    )
+
+    expect(
+      await within(dialog).findByText('This task changed after you opened it.'),
+    ).toBeInTheDocument()
+    expect(title).toHaveValue('Updated by leader')
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Retry my action' }),
+    )
+
+    await waitFor(() => expect(putBodies).toHaveLength(2))
+    expect(putBodies).toEqual([
+      expect.objectContaining({
+        title: 'Updated by leader',
+        rowVersion: 'version-1',
+      }),
+      expect.objectContaining({
+        title: 'Updated by leader',
+        rowVersion: 'version-2',
+      }),
+    ])
+    expect(
+      await screen.findByText('Task updated with the latest version'),
+    ).toBeInTheDocument()
+  })
+
+  it('keeps content read-only for a member while allowing an assignee status transition', async () => {
+    const memberAuth: AuthContextValue = {
+      ...authContext,
+      user: {
+        id: 'member-1',
+        email: 'member@example.com',
+        displayName: 'Bao Trung',
+      },
+    }
+    const patchBodies: unknown[] = []
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const path = String(input)
+        const optionResponse = optionsResponse(path)
+        if (optionResponse) return optionResponse
+        if (path.endsWith('/dependencies')) return jsonResponse([])
+        if (path.endsWith('/tasks/task-1/status') && init?.method === 'PATCH') {
+          patchBodies.push(JSON.parse(String(init.body)))
+          return jsonResponse({
+            ...taskDetails,
+            status: 'EvidenceLinked',
+            rowVersion: 'version-2',
+          })
+        }
+        if (path.endsWith('/tasks/task-1')) return jsonResponse(taskDetails)
+        if (path.includes('/tasks?')) return jsonResponse(taskPage([task]))
+        throw new Error(`Unexpected request: ${path}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard(
+      'Member',
+      '/workspaces/workspace-1/projects/project-1/tasks?task=task-1',
+      memberAuth,
+    )
+    const dialog = await screen.findByRole('dialog', {
+      name: 'TP-023 task details',
+    })
+    expect(within(dialog).getByLabelText('Title')).toHaveAttribute('readonly')
+    expect(
+      within(dialog).queryByRole('button', { name: 'Save changes' }),
+    ).toBeNull()
+    expect(within(dialog).queryByRole('button', { name: 'Archive' })).toBeNull()
+
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Evidence linked' }),
+    )
+    await waitFor(() =>
+      expect(patchBodies).toEqual([
+        { status: 'EvidenceLinked', rowVersion: 'version-1' },
+      ]),
+    )
+  })
+
+  it('requires archive confirmation before removing the task from the active board', async () => {
+    let archived = false
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const path = String(input)
+        const optionResponse = optionsResponse(path)
+        if (optionResponse) return optionResponse
+        if (path.endsWith('/dependencies')) return jsonResponse([])
+        if (path.endsWith('/tasks/task-1/archive') && init?.method === 'POST') {
+          archived = true
+          return jsonResponse({
+            ...taskDetails,
+            isArchived: true,
+            archivedAtUtc: '2026-10-17T01:00:00Z',
+          })
+        }
+        if (path.endsWith('/tasks/task-1')) return jsonResponse(taskDetails)
+        if (path.includes('/tasks?')) {
+          return jsonResponse(taskPage(archived ? [] : [task]))
+        }
+        throw new Error(`Unexpected request: ${path}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?task=task-1',
+    )
+    const detailDialog = await screen.findByRole('dialog', {
+      name: 'TP-023 task details',
+    })
+    await user.click(
+      within(detailDialog).getByRole('button', { name: 'Archive' }),
+    )
+    expect(archived).toBe(false)
+
+    const confirmDialog = screen.getByRole('dialog', {
+      name: 'Archive this task?',
+    })
+    await user.click(
+      within(confirmDialog).getByRole('button', { name: 'Archive task' }),
+    )
+
+    await waitFor(() => expect(archived).toBe(true))
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: 'TP-023 task details' }),
+      ).toBeNull(),
+    )
+    expect(screen.getByTestId('location')).not.toHaveTextContent('task=task-1')
   })
 })

@@ -70,6 +70,7 @@ public sealed record TaskDetails(
     string Title,
     string? Description,
     ProjectTaskStatus Status,
+    ProjectTaskStatus? StatusBeforeBlocked,
     TaskPriority Priority,
     DateOnly? DueOn,
     decimal? EstimateHours,

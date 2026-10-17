@@ -2,22 +2,47 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '@/features/auth/useAuth'
 import { taskApi } from '@/features/tasks/taskApi'
-import type { CreateTaskInput, TaskFilters } from '@/features/tasks/types'
+import type {
+  ChangeTaskStatusInput,
+  CreateTaskInput,
+  TaskDetails,
+  TaskFilters,
+  UpdateTaskInput,
+} from '@/features/tasks/types'
 
 export const taskKeys = {
   project: (workspaceId: string, projectId: string) =>
     ['tasks', workspaceId, projectId] as const,
   list: (workspaceId: string, projectId: string, filters: TaskFilters) =>
     [...taskKeys.project(workspaceId, projectId), 'list', filters] as const,
+  detail: (workspaceId: string, projectId: string, taskId: string) =>
+    [...taskKeys.project(workspaceId, projectId), 'detail', taskId] as const,
+  dependencies: (workspaceId: string, projectId: string) =>
+    [...taskKeys.project(workspaceId, projectId), 'dependencies'] as const,
   members: (workspaceId: string) => ['workspace-members', workspaceId] as const,
   sprints: (workspaceId: string, projectId: string) =>
     ['sprints', workspaceId, projectId] as const,
+}
+
+export function useTaskDetails(
+  workspaceId: string,
+  projectId: string,
+  taskId?: string,
+) {
+  const { accessToken } = useAuth()
+
+  return useQuery({
+    queryKey: taskKeys.detail(workspaceId, projectId, taskId ?? ''),
+    queryFn: () => taskApi.get(accessToken!, workspaceId, projectId, taskId!),
+    enabled: Boolean(accessToken && workspaceId && projectId && taskId),
+  })
 }
 
 export function useTasks(
   workspaceId: string,
   projectId: string,
   filters: TaskFilters,
+  enabled = true,
 ) {
   const { accessToken } = useAuth()
 
@@ -25,7 +50,7 @@ export function useTasks(
     queryKey: taskKeys.list(workspaceId, projectId, filters),
     queryFn: () =>
       taskApi.listAll(accessToken!, workspaceId, projectId, filters),
-    enabled: Boolean(accessToken && workspaceId && projectId),
+    enabled: Boolean(enabled && accessToken && workspaceId && projectId),
   })
 }
 
@@ -56,6 +81,140 @@ export function useCreateTask(workspaceId: string, projectId: string) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: taskKeys.project(workspaceId, projectId),
+      })
+    },
+  })
+}
+
+function useTaskMutationSuccess(workspaceId: string, projectId: string) {
+  const queryClient = useQueryClient()
+
+  return async (task: TaskDetails) => {
+    queryClient.setQueryData(
+      taskKeys.detail(workspaceId, projectId, task.id),
+      task,
+    )
+    await queryClient.invalidateQueries({
+      queryKey: taskKeys.project(workspaceId, projectId),
+    })
+  }
+}
+
+export function useUpdateTask(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+) {
+  const { accessToken } = useAuth()
+  const onSuccess = useTaskMutationSuccess(workspaceId, projectId)
+
+  return useMutation({
+    mutationFn: (input: UpdateTaskInput) =>
+      taskApi.update(accessToken!, workspaceId, projectId, taskId, input),
+    onSuccess,
+  })
+}
+
+export function useChangeTaskStatus(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+) {
+  const { accessToken } = useAuth()
+  const onSuccess = useTaskMutationSuccess(workspaceId, projectId)
+
+  return useMutation({
+    mutationFn: (input: ChangeTaskStatusInput) =>
+      taskApi.changeStatus(accessToken!, workspaceId, projectId, taskId, input),
+    onSuccess,
+  })
+}
+
+export function useArchiveTask(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+) {
+  const { accessToken } = useAuth()
+  const onSuccess = useTaskMutationSuccess(workspaceId, projectId)
+
+  return useMutation({
+    mutationFn: (rowVersion: string) =>
+      taskApi.archive(accessToken!, workspaceId, projectId, taskId, rowVersion),
+    onSuccess,
+  })
+}
+
+export function useTaskDependencies(
+  workspaceId: string,
+  projectId: string,
+  enabled = true,
+) {
+  const { accessToken } = useAuth()
+
+  return useQuery({
+    queryKey: taskKeys.dependencies(workspaceId, projectId),
+    queryFn: () =>
+      taskApi.listDependencies(accessToken!, workspaceId, projectId),
+    enabled: Boolean(enabled && accessToken && workspaceId && projectId),
+  })
+}
+
+export function useCreateTaskDependency(
+  workspaceId: string,
+  projectId: string,
+) {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      predecessorTaskId,
+      successorTaskId,
+    }: {
+      predecessorTaskId: string
+      successorTaskId: string
+    }) =>
+      taskApi.createDependency(
+        accessToken!,
+        workspaceId,
+        projectId,
+        predecessorTaskId,
+        successorTaskId,
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: taskKeys.dependencies(workspaceId, projectId),
+      })
+    },
+  })
+}
+
+export function useDeleteTaskDependency(
+  workspaceId: string,
+  projectId: string,
+) {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      predecessorTaskId,
+      successorTaskId,
+    }: {
+      predecessorTaskId: string
+      successorTaskId: string
+    }) =>
+      taskApi.deleteDependency(
+        accessToken!,
+        workspaceId,
+        projectId,
+        predecessorTaskId,
+        successorTaskId,
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: taskKeys.dependencies(workspaceId, projectId),
       })
     },
   })

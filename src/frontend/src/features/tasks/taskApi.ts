@@ -1,10 +1,14 @@
 import type {
+  ChangeTaskStatusInput,
   CreateTaskInput,
   PagedTaskResponse,
   SprintOption,
+  TaskDependency,
+  TaskDetails,
   TaskErrorBody,
   TaskFilters,
   TaskSummary,
+  UpdateTaskInput,
   WorkspaceMemberOption,
 } from '@/features/tasks/types'
 
@@ -52,6 +56,7 @@ async function request<T>(
     }
   }
 
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
@@ -119,6 +124,102 @@ export const taskApi = {
         method: 'POST',
         body: JSON.stringify(input),
       },
+    )
+  },
+
+  get(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+  ) {
+    return request<TaskDetails>(
+      `${projectPath(workspaceId, projectId)}/tasks/${taskId}`,
+      accessToken,
+    )
+  },
+
+  update(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+    input: UpdateTaskInput,
+  ) {
+    return request<TaskDetails>(
+      `${projectPath(workspaceId, projectId)}/tasks/${taskId}`,
+      accessToken,
+      { method: 'PUT', body: JSON.stringify(input) },
+    )
+  },
+
+  changeStatus(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+    input: ChangeTaskStatusInput,
+  ) {
+    return request<TaskDetails>(
+      `${projectPath(workspaceId, projectId)}/tasks/${taskId}/status`,
+      accessToken,
+      { method: 'PATCH', body: JSON.stringify(input) },
+    )
+  },
+
+  archive(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+    rowVersion: string,
+  ) {
+    return request<TaskDetails>(
+      `${projectPath(workspaceId, projectId)}/tasks/${taskId}/archive`,
+      accessToken,
+      { method: 'POST', body: JSON.stringify({ rowVersion }) },
+    )
+  },
+
+  listDependencies(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+  ) {
+    return request<TaskDependency[]>(
+      `${projectPath(workspaceId, projectId)}/dependencies`,
+      accessToken,
+    )
+  },
+
+  createDependency(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    predecessorTaskId: string,
+    successorTaskId: string,
+  ) {
+    return request<TaskDependency>(
+      `${projectPath(workspaceId, projectId)}/dependencies`,
+      accessToken,
+      {
+        method: 'POST',
+        body: JSON.stringify({ predecessorTaskId, successorTaskId }),
+      },
+    )
+  },
+
+  deleteDependency(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    predecessorTaskId: string,
+    successorTaskId: string,
+  ) {
+    return request<void>(
+      `${projectPath(workspaceId, projectId)}/dependencies/${predecessorTaskId}/${successorTaskId}`,
+      accessToken,
+      { method: 'DELETE' },
     )
   },
 
