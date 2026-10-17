@@ -1,13 +1,18 @@
 import type {
+  AddTaskEvidenceInput,
   ChangeTaskStatusInput,
   CreateTaskInput,
   PagedTaskResponse,
   SprintOption,
   TaskDependency,
   TaskDetails,
+  TaskCollaboration,
+  TaskEvidence,
   TaskErrorBody,
   TaskFilters,
   TaskSummary,
+  ReviewTaskInput,
+  TaskReviewResult,
   UpdateTaskInput,
   WorkspaceMemberOption,
 } from '@/features/tasks/types'
@@ -179,6 +184,46 @@ export const taskApi = {
       `${projectPath(workspaceId, projectId)}/tasks/${taskId}/archive`,
       accessToken,
       { method: 'POST', body: JSON.stringify({ rowVersion }) },
+    )
+  },
+
+  getCollaboration(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+  ) {
+    return request<TaskCollaboration>(
+      `${projectPath(workspaceId, projectId)}/tasks/${taskId}/collaboration`,
+      accessToken,
+    )
+  },
+
+  addEvidence(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+    input: AddTaskEvidenceInput,
+  ) {
+    return request<TaskEvidence>(
+      `${projectPath(workspaceId, projectId)}/tasks/${taskId}/evidence`,
+      accessToken,
+      { method: 'POST', body: JSON.stringify(input) },
+    )
+  },
+
+  review(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    taskId: string,
+    input: ReviewTaskInput,
+  ) {
+    return request<TaskReviewResult>(
+      `${projectPath(workspaceId, projectId)}/tasks/${taskId}/review`,
+      accessToken,
+      { method: 'POST', body: JSON.stringify(input) },
     )
   },
 

@@ -20,4 +20,7 @@ public enum ActivityAction
     TaskDeadlineChanged,
     TaskStatusChanged,
     TaskArchived,
+    TaskEvidenceAdded,
+    TaskReviewAccepted,
+    TaskChangesRequested,
 }

@@ -103,6 +103,7 @@ public enum TaskFailure
     ReviewerNotFound,
     SprintNotFound,
     InvalidStatusTransition,
+    ReviewRequiresInReview,
     Forbidden,
     ConcurrencyConflict,
 }

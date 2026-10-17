@@ -94,6 +94,52 @@ export interface ChangeTaskStatusInput {
   rowVersion: string
 }
 
+export type TaskEvidenceType =
+  'Commit' | 'PullRequest' | 'Issue' | 'Document' | 'Design' | 'Demo'
+
+export interface TaskEvidence {
+  id: string
+  type: TaskEvidenceType
+  url: string
+  note: string | null
+  submittedBy: TaskMember
+  createdAtUtc: string
+}
+
+export type TaskCommentKind = 'ReviewAccepted' | 'ChangesRequested'
+
+export interface TaskComment {
+  id: string
+  kind: TaskCommentKind
+  body: string
+  author: TaskMember
+  createdAtUtc: string
+}
+
+export interface TaskCollaboration {
+  evidence: TaskEvidence[]
+  comments: TaskComment[]
+}
+
+export interface AddTaskEvidenceInput {
+  type: TaskEvidenceType
+  url: string
+  note?: string
+}
+
+export interface ReviewTaskInput {
+  decision: 'Accept' | 'RequestChanges'
+  comment: string
+  rowVersion: string
+}
+
+export interface TaskReviewResult {
+  taskId: string
+  status: TaskStatus
+  rowVersion: string
+  comment: TaskComment
+}
+
 export interface DependencyTask {
   id: string
   code: string

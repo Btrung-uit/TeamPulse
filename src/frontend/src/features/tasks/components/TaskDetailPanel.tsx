@@ -11,7 +11,10 @@ import {
   AlertTriangle,
   Archive,
   ArrowRight,
+  ExternalLink,
   GitBranch,
+  Link2,
+  MessageSquareText,
   RefreshCw,
   Trash2,
   X,
@@ -31,18 +34,22 @@ import {
 } from '@/features/tasks/taskDetailModel'
 import { statusForCard } from '@/features/tasks/taskBoardModel'
 import {
+  useAddTaskEvidence,
   useArchiveTask,
   useChangeTaskStatus,
   useCreateTaskDependency,
   useDeleteTaskDependency,
   useTaskDependencies,
   useTaskDetails,
+  useTaskCollaboration,
   useTaskOptions,
   useTasks,
   useUpdateTask,
+  useReviewTask,
 } from '@/features/tasks/taskQueries'
 import type {
   TaskDetails,
+  TaskEvidenceType,
   TaskPriority,
   TaskStatus,
   UpdateTaskInput,
@@ -104,6 +111,7 @@ export function TaskDetailPanel({
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const details = useTaskDetails(workspaceId, projectId, taskId)
+  const collaboration = useTaskCollaboration(workspaceId, projectId, taskId)
   const options = useTaskOptions(workspaceId, projectId, Boolean(taskId))
   const allTasks = useTasks(workspaceId, projectId, {}, Boolean(taskId))
   const dependencies = useTaskDependencies(
@@ -114,6 +122,8 @@ export function TaskDetailPanel({
   const updateTask = useUpdateTask(workspaceId, projectId, taskId ?? '')
   const changeStatus = useChangeTaskStatus(workspaceId, projectId, taskId ?? '')
   const archiveTask = useArchiveTask(workspaceId, projectId, taskId ?? '')
+  const addEvidence = useAddTaskEvidence(workspaceId, projectId, taskId ?? '')
+  const reviewTask = useReviewTask(workspaceId, projectId, taskId ?? '')
   const createDependency = useCreateTaskDependency(workspaceId, projectId)
   const deleteDependency = useDeleteTaskDependency(workspaceId, projectId)
   const [draft, setDraft] = useState<TaskDraft>()
@@ -122,9 +132,27 @@ export function TaskDetailPanel({
   const [conflict, setConflict] = useState<ConflictAction>()
   const [isArchiveOpen, setIsArchiveOpen] = useState(false)
   const [predecessorId, setPredecessorId] = useState('')
+  const [evidenceType, setEvidenceType] = useState<TaskEvidenceType>('Commit')
+  const [evidenceUrl, setEvidenceUrl] = useState('')
+  const [evidenceNote, setEvidenceNote] = useState('')
+  const [reviewComment, setReviewComment] = useState('')
+  const [collaborationError, setCollaborationError] = useState<string>()
 
   const task = details.data
   const canManage = managementMode && role === 'Leader' && !task?.isArchived
+  const canAddEvidence = Boolean(
+    managementMode &&
+    task &&
+    !task.isArchived &&
+    (role === 'Leader' || task.assignee?.userId === user?.id),
+  )
+  const canReview = Boolean(
+    managementMode &&
+    task &&
+    !task.isArchived &&
+    role === 'Leader' &&
+    task.status === 'InReview',
+  )
   const statusTargets = task
     ? allowedStatusTransitions(task, role, user?.id ?? '')
     : []
@@ -152,6 +180,8 @@ export function TaskDetailPanel({
     updateTask.isPending ||
     changeStatus.isPending ||
     archiveTask.isPending ||
+    addEvidence.isPending ||
+    reviewTask.isPending ||
     createDependency.isPending ||
     deleteDependency.isPending
 
@@ -385,6 +415,69 @@ export function TaskDetailPanel({
       showToast({ title: 'Dependency removed', variant: 'success' })
     } catch (error) {
       setFormError(taskError(error, 'The dependency could not be removed.'))
+    }
+  }
+
+  async function submitEvidence(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const url = evidenceUrl.trim()
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(url)
+    } catch {
+      setCollaborationError('Enter an absolute HTTP or HTTPS URL.')
+      return
+    }
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      setCollaborationError('Enter an absolute HTTP or HTTPS URL.')
+      return
+    }
+
+    setCollaborationError(undefined)
+    try {
+      await addEvidence.mutateAsync({
+        type: evidenceType,
+        url,
+        note: evidenceNote.trim() || undefined,
+      })
+      setEvidenceUrl('')
+      setEvidenceNote('')
+      showToast({
+        title: 'Evidence linked',
+        description: 'The link is now part of this task history.',
+        variant: 'success',
+      })
+    } catch (error) {
+      setCollaborationError(
+        taskError(error, 'The evidence could not be linked.'),
+      )
+    }
+  }
+
+  async function submitReview(decision: 'Accept' | 'RequestChanges') {
+    if (!task) return
+    const comment = reviewComment.trim()
+    if (!comment) {
+      setCollaborationError('Add a review comment before recording a decision.')
+      return
+    }
+
+    setCollaborationError(undefined)
+    try {
+      await reviewTask.mutateAsync({
+        decision,
+        comment,
+        rowVersion: task.rowVersion,
+      })
+      setReviewComment('')
+      showToast({
+        title: decision === 'Accept' ? 'Task accepted' : 'Changes requested',
+        variant: 'success',
+      })
+    } catch (error) {
+      setCollaborationError(
+        taskError(error, 'The review could not be recorded.'),
+      )
     }
   }
 
@@ -668,6 +761,164 @@ export function TaskDetailPanel({
                   </div>
                 </section>
               </form>
+
+              <section
+                className="task-detail-section"
+                aria-labelledby="task-evidence-title"
+              >
+                <div className="task-detail-section__heading">
+                  <div>
+                    <p className="eyebrow">Proof of work</p>
+                    <h3 id="task-evidence-title">Evidence and review</h3>
+                  </div>
+                  <Link2 aria-hidden="true" size={18} />
+                </div>
+
+                {canAddEvidence && (
+                  <form
+                    className="task-evidence-form"
+                    onSubmit={(event) => void submitEvidence(event)}
+                  >
+                    <TaskSelectField
+                      label="Evidence type"
+                      name="evidence-type"
+                      value={evidenceType}
+                      disabled={addEvidence.isPending}
+                      onChange={(event) =>
+                        setEvidenceType(event.target.value as TaskEvidenceType)
+                      }
+                    >
+                      <option value="Commit">Commit</option>
+                      <option value="PullRequest">Pull request</option>
+                      <option value="Issue">Issue</option>
+                      <option value="Document">Document</option>
+                      <option value="Design">Design</option>
+                      <option value="Demo">Demo</option>
+                    </TaskSelectField>
+                    <Input
+                      label="Evidence URL"
+                      type="url"
+                      placeholder="https://github.com/org/repo/pull/42"
+                      value={evidenceUrl}
+                      disabled={addEvidence.isPending}
+                      onChange={(event) => setEvidenceUrl(event.target.value)}
+                    />
+                    <Textarea
+                      label="Evidence note"
+                      rows={2}
+                      maxLength={500}
+                      value={evidenceNote}
+                      disabled={addEvidence.isPending}
+                      onChange={(event) => setEvidenceNote(event.target.value)}
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      isLoading={addEvidence.isPending}
+                      loadingLabel="Linking evidence"
+                    >
+                      Link evidence
+                    </Button>
+                  </form>
+                )}
+
+                {collaboration.isLoading ? (
+                  <p className="task-detail-help">Loading evidence…</p>
+                ) : collaboration.isError ? (
+                  <div className="task-collaboration-error" role="alert">
+                    <span>Evidence history is unavailable.</span>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => void collaboration.refetch()}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (collaboration.data?.evidence.length ?? 0) === 0 ? (
+                  <p className="task-detail-help">
+                    No evidence has been linked yet.
+                  </p>
+                ) : (
+                  <div className="task-evidence-list">
+                    {collaboration.data?.evidence.map((item) => (
+                      <article key={item.id} className="task-evidence-item">
+                        <div>
+                          <strong>
+                            {item.type.replace('PullRequest', 'Pull request')}
+                          </strong>
+                          <span>
+                            {item.submittedBy.displayName} ·{' '}
+                            {new Date(item.createdAtUtc).toLocaleString()}
+                          </span>
+                        </div>
+                        <a href={item.url} target="_blank" rel="noreferrer">
+                          Open evidence
+                          <ExternalLink aria-hidden="true" size={14} />
+                        </a>
+                        {item.note && <p>{item.note}</p>}
+                      </article>
+                    ))}
+                  </div>
+                )}
+
+                {canReview && (
+                  <div className="task-review-form">
+                    <Textarea
+                      label="Review comment"
+                      rows={3}
+                      maxLength={2000}
+                      value={reviewComment}
+                      disabled={reviewTask.isPending}
+                      onChange={(event) => setReviewComment(event.target.value)}
+                    />
+                    <div>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={reviewTask.isPending}
+                        onClick={() => void submitReview('RequestChanges')}
+                      >
+                        Request changes
+                      </Button>
+                      <Button
+                        size="sm"
+                        isLoading={reviewTask.isPending}
+                        loadingLabel="Recording review"
+                        onClick={() => void submitReview('Accept')}
+                      >
+                        Accept task
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {(collaboration.data?.comments.length ?? 0) > 0 && (
+                  <div className="task-review-history">
+                    <strong>
+                      <MessageSquareText aria-hidden="true" size={15} />
+                      Review history
+                    </strong>
+                    {collaboration.data?.comments.map((comment) => (
+                      <article key={comment.id}>
+                        <span>
+                          {comment.kind === 'ReviewAccepted'
+                            ? 'Accepted'
+                            : 'Changes requested'}{' '}
+                          by {comment.author.displayName}
+                        </span>
+                        <p>{comment.body}</p>
+                      </article>
+                    ))}
+                  </div>
+                )}
+
+                {collaborationError && (
+                  <p className="task-detail-error" role="alert">
+                    {collaborationError}
+                  </p>
+                )}
+              </section>
 
               <section
                 className="task-detail-section"

@@ -270,6 +270,9 @@ describe('my tasks flow', () => {
         if (path.endsWith('/members')) return jsonResponse([])
         if (path.endsWith('/sprints')) return jsonResponse([])
         if (path.endsWith('/dependencies')) return jsonResponse([])
+        if (path.endsWith('/collaboration')) {
+          return jsonResponse({ evidence: [], comments: [] })
+        }
         if (
           path.endsWith('/tasks/task-overdue/status') &&
           init?.method === 'PATCH'
