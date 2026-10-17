@@ -52,6 +52,7 @@ app.MapAuthEndpoints();
 app.MapWorkspaceEndpoints();
 app.MapProjectEndpoints();
 app.MapPlanningEndpoints();
+app.MapTaskEndpoints();
 
 app.Run();
 

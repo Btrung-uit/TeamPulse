@@ -5,7 +5,7 @@ status: accepted
 area: delivery
 tags: [teampulse/delivery, testing]
 created: 2026-10-14
-updated: 2026-10-16
+updated: 2026-10-17
 ---
 
 # Test Strategy
@@ -40,5 +40,18 @@ Khi thêm resource workspace-scoped mới, suite phải mở rộng cùng ma tr�
 - risk codes phản ánh state/deadline hiện tại nhưng không tự thay deadline;
 - `Leader` mutate, `Member`/`Advisor` read-only, foreign workspace `403` và disguised foreign project `404`;
 - planning mutation tạo activity log.
+
+## Milestone 2 task API coverage
+
+`TaskEndpointsTests` chạy qua public HTTP API và kiểm tra:
+
+- create/detail/list, server pagination và kết hợp task filters;
+- code trùng bị từ chối và code đã tạo là immutable;
+- full update chỉ dành cho Leader, quan hệ assignee/reviewer/sprint đúng tenant;
+- assignee, reviewer, Leader và Advisor có đúng quyền status đã chốt;
+- invalid transition và stale `RowVersion` trả conflict ổn định, không đổi task;
+- archive idempotent, bị ẩn mặc định nhưng giữ detail và activity;
+- foreign workspace `403`, disguised foreign project/task `404`;
+- activity create/assign/deadline/sprint/update/status/archive được tạo đúng, không nhân đôi.
 
 Related: [[Definition of Done]], [[Task Data Integrity]], [[Excel Import Transaction]].
