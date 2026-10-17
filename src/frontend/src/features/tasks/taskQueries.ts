@@ -54,9 +54,13 @@ export function useTasks(
   })
 }
 
-export function useTaskOptions(workspaceId: string, projectId: string) {
+export function useTaskOptions(
+  workspaceId: string,
+  projectId: string,
+  isEnabled = true,
+) {
   const { accessToken } = useAuth()
-  const enabled = Boolean(accessToken && workspaceId && projectId)
+  const enabled = Boolean(isEnabled && accessToken && workspaceId && projectId)
   const members = useQuery({
     queryKey: taskKeys.members(workspaceId),
     queryFn: () => taskApi.listMembers(accessToken!, workspaceId),

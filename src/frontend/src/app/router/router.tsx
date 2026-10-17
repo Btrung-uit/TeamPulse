@@ -12,8 +12,10 @@ import {
   ProjectRequiredRoute,
 } from '@/features/projects/ProjectRoutes'
 import { NotFoundPage } from '@/features/shell/pages/NotFoundPage'
+import { MobileMorePage } from '@/features/shell/pages/MobileMorePage'
 import { PlaceholderPage } from '@/features/shell/pages/PlaceholderPage'
 import { TaskBoardPage } from '@/features/tasks/pages/TaskBoardPage'
+import { MyTasksPage } from '@/features/tasks/pages/MyTasksPage'
 import { WorkspaceOnboardingPage } from '@/features/workspaces/pages/WorkspaceOnboardingPage'
 import {
   WorkspaceOnboardingRoute,
@@ -93,13 +95,7 @@ export const router = createBrowserRouter([
                           },
                           {
                             path: 'my-tasks',
-                            element: (
-                              <PlaceholderPage
-                                eyebrow="Work"
-                                title="My tasks"
-                                description="Your focused task queue will appear here after task lifecycle is implemented."
-                              />
-                            ),
+                            element: <MyTasksPage />,
                           },
                           {
                             path: 'engineering/pull-requests',
@@ -143,13 +139,7 @@ export const router = createBrowserRouter([
                           },
                           {
                             path: 'more',
-                            element: (
-                              <PlaceholderPage
-                                eyebrow="Mobile"
-                                title="More"
-                                description="Secondary mobile destinations will be grouped here without exposing high-risk admin actions."
-                              />
-                            ),
+                            element: <MobileMorePage />,
                           },
                         ],
                       },

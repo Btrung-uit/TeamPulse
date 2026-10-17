@@ -55,6 +55,7 @@ export interface PagedTaskResponse {
 
 export interface TaskFilters {
   search?: string
+  status?: TaskStatus
   priority?: TaskPriority
   assigneeUserId?: string
   sprintId?: string
