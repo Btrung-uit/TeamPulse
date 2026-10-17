@@ -4,13 +4,17 @@ React + TypeScript client for the TeamPulse project workspace. TP-005 provides
 the design-system foundation and responsive application shell. TP-006 adds the
 reusable, accessible primitives used by subsequent product features.
 
+TP-023 adds the first data-backed work-management screen: a project-scoped
+Kanban board, URL-persisted filters and sorting, paginated task loading, and a
+Leader-only task creation flow.
+
 ## Runtime foundation
 
 - React Router owns the route tree, not-found handling, and route-level error
   boundary. The dashboard is lazy-loaded with a visible skeleton fallback.
 - TanStack Query is configured once in `src/app/providers` for future server
-  state. Query features should consume this shared client instead of creating
-  feature-specific clients.
+  state. Task list/options queries and task creation mutations consume this
+  shared client and invalidate only the active project's task cache.
 - `ThemeProvider` persists `dark` or `light` in `localStorage` under
   `teampulse-theme` and applies the matching design tokens to the root element.
 - `GlobalErrorBoundary` protects failures above the router; route failures use
@@ -56,6 +60,19 @@ Reusable components are exported from `src/components/ui/index.ts`:
 
 Open `/dev/components` during development to review every component and its
 important states in dark/light and desktop/mobile layouts.
+
+## Task board
+
+`/workspaces/{workspaceId}/projects/{projectId}/tasks` reads every server page,
+groups active tasks into the seven lifecycle columns, and keeps search,
+assignee, sprint, priority, and sort state in the query string. The board uses
+horizontal scrolling so columns remain readable instead of collapsing.
+
+Only a Leader sees task creation controls. The modal validates the same task
+code, title, description, estimate, membership, sprint, and priority contract
+as the API. Member and Advisor views remain read-only in this slice. Status
+mutation and task-detail conflict handling intentionally remain in TP-024, so
+TP-023 does not expose drag-and-drop.
 
 ## Commands
 

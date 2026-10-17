@@ -54,4 +54,14 @@ Khi thêm resource workspace-scoped mới, suite phải mở rộng cùng ma tr�
 - foreign workspace `403`, disguised foreign project/task `404`;
 - activity create/assign/deadline/sprint/update/status/archive được tạo đúng, không nhân đôi.
 
+## Milestone 2 task board coverage
+
+`TaskBoardFlow.test.tsx` bảo vệ các hành vi frontend có rủi ro cao:
+
+- đọc tiếp mọi page API trước khi render board, không âm thầm bỏ task sau page đầu;
+- task xuất hiện ở đúng lifecycle column và request gửi Bearer token;
+- filter thay đổi query string nhưng giữ nguyên workspace/project deep link;
+- Leader tạo task với payload đã normalize và query được refresh sau mutation;
+- Member không thấy `New task` hoặc `Import Excel` để tránh UI hứa quyền không có.
+
 Related: [[Definition of Done]], [[Task Data Integrity]], [[Excel Import Transaction]].
