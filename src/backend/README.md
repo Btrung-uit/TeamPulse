@@ -114,6 +114,19 @@ All routes use `/api/workspaces/{workspaceId}/projects/{projectId}`. Active work
 
 Risk warnings use stable codes: `predecessor_incomplete`, `predecessor_overdue`, and `deadline_conflict`. They are calculated from current task state and dates; the service never moves a deadline automatically. Planning mutations append immutable activity rows.
 
+## Task endpoints
+
+All routes use `/api/workspaces/{workspaceId}/projects/{projectId}/tasks`. Any active workspace member can list and read tasks. Only Leaders can create, fully update, or archive them.
+
+- `GET /`: paginated list; filters include `search`, `status`, `priority`, `assigneeUserId`, `sprintId`, `dueBefore`, and `includeArchived`.
+- `GET /{taskId}`: task details, including assignee, reviewer, sprint, and `rowVersion`.
+- `POST /`: create a task with a project-unique immutable code; Leader only.
+- `PUT /{taskId}`: replace editable task fields; Leader only and requires the latest `rowVersion`.
+- `PATCH /{taskId}/status`: perform a domain-approved lifecycle transition and requires the latest `rowVersion`.
+- `POST /{taskId}/archive`: soft-archive idempotently; Leader only and requires `rowVersion` on the first archive.
+
+An assigned Member can progress their task except to `Done`; the designated Reviewer can move an `InReview` task to `NeedsChanges`; only a Leader can complete a task. Advisors are read-only. A stale token returns `409 task_conflict`, and the client must reload before retrying. Create, assignment, deadline, sprint, details, status, and archive changes append immutable activity rows. See `docs/api/tasks.md` for the full contract.
+
 ## Tenant and identity integration coverage
 
 `TenantIdentityBoundaryTests` protects the Milestone 1 security boundary:

@@ -4,7 +4,7 @@
 >
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
-![Status](https://img.shields.io/badge/status-sprint%20planning-C9A24A)
+![Status](https://img.shields.io/badge/status-task%20API-C9A24A)
 [![CI](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)

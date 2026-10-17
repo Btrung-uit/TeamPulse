@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using TeamPulse.Application.Authentication;
 using TeamPulse.Application.Common.Interfaces;
 using TeamPulse.Application.Projects;
+using TeamPulse.Application.Tasks;
 using TeamPulse.Application.Planning;
 using TeamPulse.Application.Workspaces;
 using TeamPulse.Domain.Workspaces;
@@ -20,6 +21,7 @@ using TeamPulse.Infrastructure.Multitenancy;
 using TeamPulse.Infrastructure.Persistence;
 using TeamPulse.Infrastructure.Planning;
 using TeamPulse.Infrastructure.Projects;
+using TeamPulse.Infrastructure.Tasks;
 using TeamPulse.Infrastructure.Workspaces;
 
 namespace TeamPulse.Infrastructure;
@@ -114,6 +116,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkspaceService, WorkspaceService>();
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IPlanningService, PlanningService>();
+        services.AddScoped<ITaskService, TaskService>();
 
         return services;
     }

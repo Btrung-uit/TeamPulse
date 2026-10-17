@@ -14,4 +14,10 @@ public enum ActivityAction
     TaskSprintChanged,
     TaskDependencyAdded,
     TaskDependencyRemoved,
+    TaskCreated,
+    TaskUpdated,
+    TaskAssigned,
+    TaskDeadlineChanged,
+    TaskStatusChanged,
+    TaskArchived,
 }
