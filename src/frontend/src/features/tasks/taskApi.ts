@@ -76,6 +76,7 @@ function taskListPath(
   })
 
   if (filters.search) query.set('search', filters.search)
+  if (filters.status) query.set('status', filters.status)
   if (filters.priority) query.set('priority', filters.priority)
   if (filters.assigneeUserId) {
     query.set('assigneeUserId', filters.assigneeUserId)

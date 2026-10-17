@@ -17,6 +17,7 @@ updated: 2026-10-14
 - [[Dashboard Screen]]
 - [[Task Board Screen]]
 - [[Task Detail Screen]]
+- [[My Tasks Screen]]
 - [[PR Waiting Room Screen]]
 - [[Presentation Screen]]
 - [[Supporting Screens]]

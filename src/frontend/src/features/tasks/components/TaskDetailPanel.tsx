@@ -54,6 +54,7 @@ interface TaskDetailPanelProps {
   workspaceId: string
   projectId: string
   role: WorkspaceSummary['role']
+  managementMode?: boolean
   onClose: () => void
 }
 
@@ -95,6 +96,7 @@ export function TaskDetailPanel({
   workspaceId,
   projectId,
   role,
+  managementMode = true,
   onClose,
 }: TaskDetailPanelProps) {
   const { user } = useAuth()
@@ -102,7 +104,7 @@ export function TaskDetailPanel({
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const details = useTaskDetails(workspaceId, projectId, taskId)
-  const options = useTaskOptions(workspaceId, projectId)
+  const options = useTaskOptions(workspaceId, projectId, Boolean(taskId))
   const allTasks = useTasks(workspaceId, projectId, {}, Boolean(taskId))
   const dependencies = useTaskDependencies(
     workspaceId,
@@ -122,7 +124,7 @@ export function TaskDetailPanel({
   const [predecessorId, setPredecessorId] = useState('')
 
   const task = details.data
-  const canManage = role === 'Leader' && !task?.isArchived
+  const canManage = managementMode && role === 'Leader' && !task?.isArchived
   const statusTargets = task
     ? allowedStatusTransitions(task, role, user?.id ?? '')
     : []
