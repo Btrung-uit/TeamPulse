@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -509,6 +510,112 @@ public sealed class TaskEndpointsTests : IClassFixture<TeamPulseApiFactory>
         Assert.Contains(ActivityAction.TaskReviewAccepted, actions);
     }
 
+    [Fact]
+    public async Task Dashboard_ReportsProjectWorkAndAcceptedContributionsWithinTenantBoundary()
+    {
+        using var leader = await RegisterAsync("Dashboard Leader");
+        using var member = await RegisterAsync("Dashboard Member");
+        using var outsider = await RegisterAsync("Dashboard Outsider");
+        var workspaceId = await CreateWorkspaceAsync(leader.Client, "Dashboard Workspace");
+        await AddMemberAsync(leader.Client, workspaceId, member.Email, "Member");
+        var projectId = await CreateProjectAsync(leader.Client, workspaceId, "Dashboard Project");
+
+        var acceptedTask = await CreateTaskAsync(
+            leader.Client,
+            workspaceId,
+            projectId,
+            BasicTask("TP-601", member.UserId, null));
+        acceptedTask = await ChangeStatusSuccessAsync(
+            member.Client, workspaceId, projectId, acceptedTask, "InProgress");
+        var taskUrl = $"{TasksUrl(workspaceId, projectId)}/{acceptedTask.Id}";
+        var evidenceResponse = await member.Client.PostAsJsonAsync(
+            $"{taskUrl}/evidence",
+            new AddEvidenceRequest(
+                "PullRequest",
+                "https://github.com/example/pull/601",
+                "Dashboard evidence"));
+        evidenceResponse.EnsureSuccessStatusCode();
+        acceptedTask = (await member.Client.GetFromJsonAsync<TaskDetailsResponse>(taskUrl))!;
+        acceptedTask = await ChangeStatusSuccessAsync(
+            member.Client, workspaceId, projectId, acceptedTask, "InReview");
+        var reviewResponse = await leader.Client.PostAsJsonAsync(
+            $"{taskUrl}/review",
+            new ReviewTaskRequest("Accept", "Accepted for dashboard.", acceptedTask.RowVersion));
+        reviewResponse.EnsureSuccessStatusCode();
+
+        var blockedTask = await CreateTaskAsync(
+            leader.Client,
+            workspaceId,
+            projectId,
+            BasicTask("TP-602", member.UserId, null));
+        await ChangeStatusSuccessAsync(
+            member.Client, workspaceId, projectId, blockedTask, "Blocked");
+        await CreateTaskAsync(
+            leader.Client,
+            workspaceId,
+            projectId,
+            BasicTask("TP-603", member.UserId, null) with
+            {
+                DueOn = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2),
+            });
+
+        var otherProjectId = await CreateProjectAsync(
+            leader.Client, workspaceId, "Excluded Dashboard Project");
+        await CreateTaskAsync(
+            leader.Client,
+            workspaceId,
+            otherProjectId,
+            BasicTask("TP-699", leader.UserId, null));
+
+        var dashboardUrl = DashboardUrl(workspaceId, projectId);
+        var response = await member.Client.GetAsync(dashboardUrl);
+        response.EnsureSuccessStatusCode();
+        var rawJson = await response.Content.ReadAsStringAsync();
+        var dashboard = JsonSerializer.Deserialize<DashboardResponse>(
+            rawJson,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.NotNull(dashboard);
+        Assert.Equal(3, dashboard.Kpis.TotalTasks);
+        Assert.Equal(1, dashboard.Kpis.DoneTasks);
+        Assert.Equal(2, dashboard.Kpis.OpenTasks);
+        Assert.Equal(1, dashboard.Kpis.BlockedTasks);
+        Assert.Equal(1, dashboard.Kpis.DueSoonTasks);
+        Assert.Equal(33, dashboard.Kpis.ProgressPercent);
+        Assert.Equal(2, dashboard.MyPriorityTasks.Count);
+
+        var memberWorkload = Assert.Single(
+            dashboard.Workload,
+            item => item.UserId == member.UserId);
+        Assert.Equal(2, memberWorkload.OpenTasks);
+        Assert.Equal(1, memberWorkload.BlockedTasks);
+        Assert.Equal(1, memberWorkload.DueSoonTasks);
+        var memberContribution = Assert.Single(
+            dashboard.Contributions,
+            item => item.UserId == member.UserId);
+        Assert.Equal(1, memberContribution.AcceptedTasks);
+        Assert.Equal(1, memberContribution.AcceptedEvidence);
+        Assert.Equal(0, memberContribution.Reviews);
+        var leaderContribution = Assert.Single(
+            dashboard.Contributions,
+            item => item.UserId == leader.UserId);
+        Assert.Equal(1, leaderContribution.Reviews);
+        Assert.DoesNotContain("score", rawJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("commit", rawJson, StringComparison.OrdinalIgnoreCase);
+
+        var outsiderWorkspaceId = await CreateWorkspaceAsync(
+            outsider.Client, "Outsider Dashboard Workspace");
+        var outsiderProjectId = await CreateProjectAsync(
+            outsider.Client, outsiderWorkspaceId, "Outsider Dashboard Project");
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            (await member.Client.GetAsync(
+                DashboardUrl(outsiderWorkspaceId, outsiderProjectId))).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await member.Client.GetAsync(
+                DashboardUrl(workspaceId, outsiderProjectId))).StatusCode);
+    }
+
     private async Task<RegisteredUser> RegisterAsync(string displayName)
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -663,6 +770,9 @@ public sealed class TaskEndpointsTests : IClassFixture<TeamPulseApiFactory>
     private static string TasksUrl(Guid workspaceId, Guid projectId) =>
         $"/api/workspaces/{workspaceId}/projects/{projectId}/tasks";
 
+    private static string DashboardUrl(Guid workspaceId, Guid projectId) =>
+        $"/api/workspaces/{workspaceId}/projects/{projectId}/dashboard";
+
     private sealed record RegisteredUser(Guid UserId, string Email, HttpClient Client) : IDisposable
     {
         public void Dispose() => Client.Dispose();
@@ -752,6 +862,33 @@ public sealed class TaskEndpointsTests : IClassFixture<TeamPulseApiFactory>
         int PageSize,
         int TotalCount,
         int TotalPages);
+
+    private sealed record DashboardKpisResponse(
+        int TotalTasks,
+        int DoneTasks,
+        int OpenTasks,
+        int InReviewTasks,
+        int BlockedTasks,
+        int DueSoonTasks,
+        int ProgressPercent);
+
+    private sealed record DashboardWorkloadResponse(
+        Guid UserId,
+        int OpenTasks,
+        int BlockedTasks,
+        int DueSoonTasks);
+
+    private sealed record DashboardContributionResponse(
+        Guid UserId,
+        int AcceptedTasks,
+        int AcceptedEvidence,
+        int Reviews);
+
+    private sealed record DashboardResponse(
+        DashboardKpisResponse Kpis,
+        IReadOnlyList<DashboardWorkloadResponse> Workload,
+        IReadOnlyList<TaskDetailsResponse> MyPriorityTasks,
+        IReadOnlyList<DashboardContributionResponse> Contributions);
 
     private sealed record ApiErrorResponse(string Code, string Message);
 }

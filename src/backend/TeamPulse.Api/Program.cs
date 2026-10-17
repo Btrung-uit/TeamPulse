@@ -54,6 +54,7 @@ app.MapProjectEndpoints();
 app.MapPlanningEndpoints();
 app.MapTaskEndpoints();
 app.MapTaskCollaborationEndpoints();
+app.MapDashboardEndpoints();
 
 app.Run();
 

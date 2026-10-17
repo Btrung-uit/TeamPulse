@@ -10,12 +10,14 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using TeamPulse.Application.Authentication;
 using TeamPulse.Application.Common.Interfaces;
+using TeamPulse.Application.Dashboard;
 using TeamPulse.Application.Projects;
 using TeamPulse.Application.Tasks;
 using TeamPulse.Application.Planning;
 using TeamPulse.Application.Workspaces;
 using TeamPulse.Domain.Workspaces;
 using TeamPulse.Infrastructure.Authorization;
+using TeamPulse.Infrastructure.Dashboard;
 using TeamPulse.Infrastructure.Identity;
 using TeamPulse.Infrastructure.Multitenancy;
 using TeamPulse.Infrastructure.Persistence;
@@ -118,6 +120,7 @@ public static class DependencyInjection
         services.AddScoped<IPlanningService, PlanningService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<ITaskCollaborationService, TaskCollaborationService>();
+        services.AddScoped<IDashboardService, DashboardService>();
 
         return services;
     }

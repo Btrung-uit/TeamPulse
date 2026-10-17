@@ -30,7 +30,7 @@ import {
   taskColumns,
 } from '@/features/tasks/taskBoardModel'
 import { useTaskOptions, useTasks } from '@/features/tasks/taskQueries'
-import type { TaskFilters } from '@/features/tasks/types'
+import type { TaskFilters, TaskStatus } from '@/features/tasks/types'
 import { useWorkspace } from '@/features/workspaces/useWorkspace'
 
 function TaskBoardSkeleton() {
@@ -65,6 +65,20 @@ function TaskBoardSkeleton() {
   )
 }
 
+const taskStatuses: TaskStatus[] = [
+  'Todo',
+  'InProgress',
+  'EvidenceLinked',
+  'InReview',
+  'NeedsChanges',
+  'Blocked',
+  'Done',
+]
+
+function readStatus(value: string | null) {
+  return taskStatuses.find((status) => status === value)
+}
+
 export function TaskBoardPage() {
   const { currentWorkspace } = useWorkspace()
   const { currentProject } = useProject()
@@ -75,10 +89,13 @@ export function TaskBoardPage() {
   const canManage = currentWorkspace?.role === 'Leader'
   const projectBase = `/workspaces/${workspaceId}/projects/${projectId}`
   const sort = readSort(searchParams.get('sort'))
+  const view = searchParams.get('view')
+  const attentionOnly = searchParams.get('attention') === 'true'
   const selectedTaskId = searchParams.get('task') || undefined
   const filters = useMemo<TaskFilters>(
     () => ({
       search: searchParams.get('search')?.trim() || undefined,
+      status: readStatus(searchParams.get('status')),
       priority: readPriority(searchParams.get('priority')),
       assigneeUserId: searchParams.get('assignee') || undefined,
       sprintId: searchParams.get('sprint') || undefined,
@@ -87,15 +104,33 @@ export function TaskBoardPage() {
   )
   const tasksQuery = useTasks(workspaceId, projectId, filters)
   const options = useTaskOptions(workspaceId, projectId)
-  const tasks = useMemo(
-    () => sortTasks(tasksQuery.data ?? [], sort),
-    [sort, tasksQuery.data],
-  )
+  const tasks = useMemo(() => {
+    const today = new Date()
+    const todayKey = today.toISOString().slice(0, 10)
+    const dueSoon = new Date(today)
+    dueSoon.setUTCDate(dueSoon.getUTCDate() + 7)
+    const dueSoonKey = dueSoon.toISOString().slice(0, 10)
+    const visibleTasks = (tasksQuery.data ?? []).filter((task) => {
+      if (view === 'open' && task.status === 'Done') return false
+      if (!attentionOnly) return true
+      return (
+        task.status === 'Blocked' ||
+        (task.status !== 'Done' &&
+          Boolean(
+            task.dueOn && task.dueOn >= todayKey && task.dueOn <= dueSoonKey,
+          ))
+      )
+    })
+    return sortTasks(visibleTasks, sort)
+  }, [attentionOnly, sort, tasksQuery.data, view])
   const hasFilters = Boolean(
     filters.search ||
+    filters.status ||
     filters.priority ||
     filters.assigneeUserId ||
-    filters.sprintId,
+    filters.sprintId ||
+    view === 'open' ||
+    attentionOnly,
   )
 
   function setQueryParam(name: string, value: string) {
@@ -113,9 +148,15 @@ export function TaskBoardPage() {
   function clearFilters() {
     setSearchParams((current) => {
       const next = new URLSearchParams(current)
-      ;['search', 'priority', 'assignee', 'sprint'].forEach((key) =>
-        next.delete(key),
-      )
+      ;[
+        'search',
+        'status',
+        'priority',
+        'assignee',
+        'sprint',
+        'view',
+        'attention',
+      ].forEach((key) => next.delete(key))
       return next
     })
   }

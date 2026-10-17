@@ -66,6 +66,19 @@
   border-radius: var(--radius-card);
 }
 
+.metric-card--link {
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.metric-card--link:hover {
+  border-color: var(--color-border-strong);
+  transform: translateY(-2px);
+}
+
 .metric-card__icon {
   display: grid;
   width: 36px;
@@ -163,8 +176,8 @@
   height: 154px;
   border-radius: 50%;
   background: conic-gradient(
-    var(--color-accent-strong) 0 68%,
-    var(--color-surface-muted) 68% 100%
+    var(--color-accent-strong) 0 var(--dashboard-progress, 0%),
+    var(--color-surface-muted) var(--dashboard-progress, 0%) 100%
   );
   place-items: center;
 }
@@ -258,6 +271,7 @@
   border-radius: var(--radius-control);
   color: var(--color-danger);
   background: var(--color-danger-soft);
+  text-decoration: none;
 }
 
 .risk-callout div {
@@ -353,6 +367,8 @@
   min-height: 72px;
   padding: var(--space-3) 0;
   border-top: 1px solid var(--color-border);
+  color: inherit;
+  text-decoration: none;
 }
 
 .priority-task:first-child {
@@ -462,6 +478,154 @@
   box-shadow: 0 0 0 4px var(--color-success-soft);
 }
 
+.dashboard-panel--contribution {
+  grid-column: 1 / -1;
+}
+
+.workload-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.workload-list article {
+  display: grid;
+  grid-template-columns: auto minmax(110px, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.workload-list article:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.workload-list article > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.workload-list article > div span,
+.contribution-table th span {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+}
+
+.workload-list dl {
+  display: flex;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.workload-list dl div {
+  min-width: 45px;
+  text-align: center;
+}
+
+.workload-list dt {
+  color: var(--color-text-subtle);
+  font-size: 0.65rem;
+}
+
+.workload-list dd {
+  margin: 2px 0 0;
+  color: var(--color-text);
+  font-weight: 740;
+}
+
+.contribution-table-wrap {
+  overflow-x: auto;
+}
+
+.contribution-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.contribution-table th,
+.contribution-table td {
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.contribution-table thead th {
+  padding-top: 0;
+  border-top: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+}
+
+.contribution-table tbody th {
+  display: flex;
+  min-width: 170px;
+  flex-direction: column;
+}
+
+.contribution-table td {
+  color: var(--color-text-muted);
+}
+
+.dashboard-panel__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.dashboard-state {
+  display: grid;
+  min-height: 360px;
+  justify-items: center;
+  align-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  text-align: center;
+  background: var(--color-surface);
+}
+
+.dashboard-state > svg {
+  color: var(--color-danger);
+}
+
+.dashboard-state p {
+  color: var(--color-text-muted);
+}
+
+.dashboard-skeleton {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.dashboard-skeleton .metric-card {
+  min-height: 190px;
+}
+
+.dashboard-skeleton .dashboard-panel {
+  min-height: 330px;
+}
+
+.skeleton-block {
+  overflow: hidden;
+  background: linear-gradient(
+    100deg,
+    var(--color-surface) 20%,
+    var(--color-surface-muted) 45%,
+    var(--color-surface) 70%
+  );
+  background-size: 220% 100%;
+  animation: dashboard-shimmer 1.4s infinite linear;
+}
+
+@keyframes dashboard-shimmer {
+  to {
+    background-position-x: -220%;
+  }
+}
+
 @media (max-width: 1200px) {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -481,6 +645,10 @@
 
   .dashboard-panel--activity {
     order: 4;
+  }
+
+  .dashboard-panel--contribution {
+    order: 5;
   }
 }
 
@@ -560,6 +728,15 @@
 
   .priority-task__due {
     grid-column: 1 / -1;
+  }
+
+  .workload-list article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .workload-list dl {
+    grid-column: 1 / -1;
+    justify-content: space-between;
   }
 }
 
