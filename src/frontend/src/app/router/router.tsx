@@ -13,6 +13,7 @@ import {
 } from '@/features/projects/ProjectRoutes'
 import { NotFoundPage } from '@/features/shell/pages/NotFoundPage'
 import { PlaceholderPage } from '@/features/shell/pages/PlaceholderPage'
+import { TaskBoardPage } from '@/features/tasks/pages/TaskBoardPage'
 import { WorkspaceOnboardingPage } from '@/features/workspaces/pages/WorkspaceOnboardingPage'
 import {
   WorkspaceOnboardingRoute,
@@ -78,11 +79,15 @@ export const router = createBrowserRouter([
                           { index: true, element: <DashboardRoute /> },
                           {
                             path: 'tasks',
+                            element: <TaskBoardPage />,
+                          },
+                          {
+                            path: 'import',
                             element: (
                               <PlaceholderPage
-                                eyebrow="Work"
-                                title="Task board"
-                                description="Kanban planning, filters and task creation will be delivered in the task-management milestone."
+                                eyebrow="Excel onboarding"
+                                title="Import tasks"
+                                description="Upload, column mapping and validation preview will be delivered in the Excel import milestone."
                               />
                             ),
                           },
