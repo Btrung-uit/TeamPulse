@@ -74,4 +74,14 @@ Khi thêm resource workspace-scoped mới, suite phải mở rộng cùng ma tr�
 - accept/request changes lưu comment, đổi status và tạo activity trong cùng mutation;
 - Task Detail hiển thị external link an toàn, review history và form theo đúng quyền.
 
+## Milestone 3 dashboard coverage
+
+`TaskEndpointsTests` và `DashboardFlow.test.tsx` bảo vệ:
+
+- KPI, workload, priority tasks và contribution chỉ tổng hợp trong project hiện tại;
+- foreign workspace trả `403`, project ID ngụy trang qua workspace hợp lệ trả `404`;
+- accepted task/evidence/review là các cột độc lập, response không có commit count hoặc quality score;
+- KPI dẫn tới Task Board với filter open, review hoặc attention tương ứng;
+- dữ liệu thật, first-use state và các nhánh loading/error được render ổn định.
+
 Related: [[Definition of Done]], [[Task Data Integrity]], [[Excel Import Transaction]].
