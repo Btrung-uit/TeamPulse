@@ -95,6 +95,10 @@ public sealed class ProjectTask : AuditableEntity
 
     public ICollection<TaskDependency> SuccessorDependencies { get; } = [];
 
+    public ICollection<TaskEvidence> Evidence { get; } = [];
+
+    public ICollection<TaskComment> Comments { get; } = [];
+
     public void UpdateDetails(string title, string? description)
     {
         EnsureMutable();

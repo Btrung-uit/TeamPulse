@@ -402,6 +402,113 @@ public sealed class TaskEndpointsTests : IClassFixture<TeamPulseApiFactory>
             $"{TasksUrl(workspaceA, projectA)}/{taskA.Id}"))?.Id);
     }
 
+    [Fact]
+    public async Task EvidenceAndManualReview_ValidateLinksPermissionsWorkflowAndActivity()
+    {
+        using var leader = await RegisterAsync("Evidence Leader");
+        using var assignee = await RegisterAsync("Evidence Assignee");
+        using var otherMember = await RegisterAsync("Evidence Other");
+        var workspaceId = await CreateWorkspaceAsync(leader.Client, "Evidence Workspace");
+        await AddMemberAsync(leader.Client, workspaceId, assignee.Email, "Member");
+        await AddMemberAsync(leader.Client, workspaceId, otherMember.Email, "Member");
+        var projectId = await CreateProjectAsync(leader.Client, workspaceId, "Evidence Project");
+        var task = await CreateTaskAsync(
+            leader.Client,
+            workspaceId,
+            projectId,
+            BasicTask("TP-501", assignee.UserId, null));
+        task = await ChangeStatusSuccessAsync(
+            assignee.Client,
+            workspaceId,
+            projectId,
+            task,
+            "InProgress");
+        var collaborationUrl = $"{TasksUrl(workspaceId, projectId)}/{task.Id}";
+
+        var invalidUrl = await assignee.Client.PostAsJsonAsync(
+            $"{collaborationUrl}/evidence",
+            new AddEvidenceRequest("Commit", "javascript:alert(1)", null));
+        await AssertErrorAsync(invalidUrl, HttpStatusCode.BadRequest, "validation_failed");
+
+        var forbidden = await otherMember.Client.PostAsJsonAsync(
+            $"{collaborationUrl}/evidence",
+            new AddEvidenceRequest("Commit", "https://github.com/example/commit/1", null));
+        await AssertErrorAsync(
+            forbidden,
+            HttpStatusCode.Forbidden,
+            "task_collaboration_forbidden");
+
+        var addEvidence = await assignee.Client.PostAsJsonAsync(
+            $"{collaborationUrl}/evidence",
+            new AddEvidenceRequest(
+                "PullRequest",
+                "https://github.com/example/pull/42",
+                "Ready for review"));
+        Assert.Equal(HttpStatusCode.Created, addEvidence.StatusCode);
+
+        task = (await assignee.Client.GetFromJsonAsync<TaskDetailsResponse>(collaborationUrl))!;
+        Assert.Equal("EvidenceLinked", task.Status);
+        Assert.NotEqual("Done", task.Status);
+
+        var collaboration = await assignee.Client
+            .GetFromJsonAsync<TaskCollaborationResponse>($"{collaborationUrl}/collaboration");
+        Assert.NotNull(collaboration);
+        var evidence = Assert.Single(collaboration.Evidence);
+        Assert.Equal("PullRequest", evidence.Type);
+        Assert.Equal(assignee.UserId, evidence.SubmittedBy.UserId);
+
+        task = await ChangeStatusSuccessAsync(
+            assignee.Client,
+            workspaceId,
+            projectId,
+            task,
+            "InReview");
+        var memberReview = await assignee.Client.PostAsJsonAsync(
+            $"{collaborationUrl}/review",
+            new ReviewTaskRequest("Accept", "Looks good", task.RowVersion));
+        Assert.Equal(HttpStatusCode.Forbidden, memberReview.StatusCode);
+
+        var requestChanges = await leader.Client.PostAsJsonAsync(
+            $"{collaborationUrl}/review",
+            new ReviewTaskRequest(
+                "RequestChanges",
+                "Please add a failure-path test.",
+                task.RowVersion));
+        Assert.True(
+            requestChanges.IsSuccessStatusCode,
+            await requestChanges.Content.ReadAsStringAsync());
+        var changesResult = await requestChanges.Content.ReadFromJsonAsync<TaskReviewResponse>();
+        Assert.NotNull(changesResult);
+        Assert.Equal("NeedsChanges", changesResult.Status);
+        Assert.Equal("ChangesRequested", changesResult.Comment.Kind);
+
+        task = await ChangeStatusSuccessAsync(
+            leader.Client,
+            workspaceId,
+            projectId,
+            task with { RowVersion = changesResult.RowVersion },
+            "InReview");
+        var accept = await leader.Client.PostAsJsonAsync(
+            $"{collaborationUrl}/review",
+            new ReviewTaskRequest("Accept", "Verified and accepted.", task.RowVersion));
+        accept.EnsureSuccessStatusCode();
+        var accepted = await accept.Content.ReadFromJsonAsync<TaskReviewResponse>();
+        Assert.NotNull(accepted);
+        Assert.Equal("Done", accepted.Status);
+        Assert.Equal("ReviewAccepted", accepted.Comment.Kind);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TeamPulseDbContext>();
+        var actions = await dbContext.ActivityLogs
+            .IgnoreQueryFilters()
+            .Where(activity => activity.EntityId == task.Id)
+            .Select(activity => activity.Action)
+            .ToListAsync();
+        Assert.Contains(ActivityAction.TaskEvidenceAdded, actions);
+        Assert.Contains(ActivityAction.TaskChangesRequested, actions);
+        Assert.Contains(ActivityAction.TaskReviewAccepted, actions);
+    }
+
     private async Task<RegisteredUser> RegisterAsync(string displayName)
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -583,9 +690,38 @@ public sealed class TaskEndpointsTests : IClassFixture<TeamPulseApiFactory>
 
     private sealed record ArchiveTaskRequest(string RowVersion);
 
+    private sealed record AddEvidenceRequest(string Type, string Url, string? Note);
+
+    private sealed record ReviewTaskRequest(string Decision, string Comment, string RowVersion);
+
     private sealed record TaskMemberResponse(Guid UserId, string DisplayName, string Email);
 
     private sealed record TaskSprintResponse(Guid Id, string Name);
+
+    private sealed record TaskEvidenceResponse(
+        Guid Id,
+        string Type,
+        string Url,
+        string? Note,
+        TaskMemberResponse SubmittedBy,
+        DateTimeOffset CreatedAtUtc);
+
+    private sealed record TaskCommentResponse(
+        Guid Id,
+        string Kind,
+        string Body,
+        TaskMemberResponse Author,
+        DateTimeOffset CreatedAtUtc);
+
+    private sealed record TaskCollaborationResponse(
+        IReadOnlyList<TaskEvidenceResponse> Evidence,
+        IReadOnlyList<TaskCommentResponse> Comments);
+
+    private sealed record TaskReviewResponse(
+        Guid TaskId,
+        string Status,
+        string RowVersion,
+        TaskCommentResponse Comment);
 
     private sealed record TaskDetailsResponse(
         Guid Id,

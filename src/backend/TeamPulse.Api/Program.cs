@@ -53,6 +53,7 @@ app.MapWorkspaceEndpoints();
 app.MapProjectEndpoints();
 app.MapPlanningEndpoints();
 app.MapTaskEndpoints();
+app.MapTaskCollaborationEndpoints();
 
 app.Run();
 

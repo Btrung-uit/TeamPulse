@@ -36,6 +36,10 @@ public sealed class TeamPulseDbContext(
 
     public DbSet<TaskDependency> TaskDependencies => Set<TaskDependency>();
 
+    public DbSet<TaskEvidence> TaskEvidence => Set<TaskEvidence>();
+
+    public DbSet<TaskComment> TaskComments => Set<TaskComment>();
+
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -77,6 +81,16 @@ public sealed class TeamPulseDbContext(
             .HasQueryFilter(dependency =>
                 _workspaceScope.WorkspaceId.HasValue &&
                 dependency.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<TaskEvidence>()
+            .HasQueryFilter(evidence =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                evidence.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<TaskComment>()
+            .HasQueryFilter(comment =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                comment.WorkspaceId == _workspaceScope.WorkspaceId.Value);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

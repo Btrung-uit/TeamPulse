@@ -166,6 +166,35 @@ public sealed class TaskLifecycleTests
         Assert.Equal("successorTaskId", exception.ParamName);
     }
 
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("/relative/evidence")]
+    [InlineData("ftp://example.com/proof")]
+    public void TaskEvidence_RejectsUnsafeOrRelativeUrls(string url)
+    {
+        Assert.Throws<ArgumentException>(() => new TaskEvidence(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            TaskEvidenceType.Commit,
+            url));
+    }
+
+    [Fact]
+    public void TaskComment_RequiresReviewFeedback()
+    {
+        Assert.Throws<ArgumentException>(() => new TaskComment(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            TaskCommentKind.ChangesRequested,
+            "  "));
+    }
+
     private static ProjectTask CreateTask()
     {
         return new ProjectTask(

@@ -171,6 +171,9 @@ function renderBoard(
 }
 
 function optionsResponse(path: string) {
+  if (path.endsWith('/collaboration')) {
+    return jsonResponse({ evidence: [], comments: [] })
+  }
   if (path.endsWith('/members')) {
     return jsonResponse([
       {
@@ -569,6 +572,134 @@ describe('task board flow', () => {
         { status: 'EvidenceLinked', rowVersion: 'version-1' },
       ]),
     )
+  })
+
+  it('links evidence and lets a leader record an explicit review decision', async () => {
+    let evidenceLinked = false
+    let reviewAccepted = false
+    const evidenceBodies: unknown[] = []
+    const reviewBodies: unknown[] = []
+    const reviewTask = { ...task, status: 'InReview' as const }
+    const reviewDetails = { ...taskDetails, status: 'InReview' as const }
+    const evidence = {
+      id: 'evidence-1',
+      type: 'PullRequest',
+      url: 'https://github.com/example/teampulse/pull/42',
+      note: 'Ready for review',
+      submittedBy: authContext.user,
+      createdAtUtc: '2026-10-17T01:00:00Z',
+    }
+    const comment = {
+      id: 'comment-1',
+      kind: 'ReviewAccepted',
+      body: 'Verified and accepted.',
+      author: authContext.user,
+      createdAtUtc: '2026-10-17T02:00:00Z',
+    }
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const path = String(input)
+        if (path.endsWith('/tasks/task-1/collaboration')) {
+          return jsonResponse({
+            evidence: evidenceLinked ? [evidence] : [],
+            comments: reviewAccepted ? [comment] : [],
+          })
+        }
+        if (
+          path.endsWith('/tasks/task-1/evidence') &&
+          init?.method === 'POST'
+        ) {
+          evidenceBodies.push(JSON.parse(String(init.body)))
+          evidenceLinked = true
+          return jsonResponse(evidence, 201)
+        }
+        if (path.endsWith('/tasks/task-1/review') && init?.method === 'POST') {
+          reviewBodies.push(JSON.parse(String(init.body)))
+          reviewAccepted = true
+          return jsonResponse({
+            taskId: task.id,
+            status: 'Done',
+            rowVersion: 'version-2',
+            comment,
+          })
+        }
+        const optionResponse = optionsResponse(path)
+        if (optionResponse) return optionResponse
+        if (path.endsWith('/dependencies')) return jsonResponse([])
+        if (path.endsWith('/tasks/task-1')) {
+          return jsonResponse(
+            reviewAccepted
+              ? { ...reviewDetails, status: 'Done', rowVersion: 'version-2' }
+              : reviewDetails,
+          )
+        }
+        if (path.includes('/tasks?')) {
+          return jsonResponse(
+            taskPage(
+              reviewAccepted
+                ? [{ ...reviewTask, status: 'Done' }]
+                : [reviewTask],
+            ),
+          )
+        }
+        throw new Error(`Unexpected request: ${path}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard()
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Open TP-023: Build task board',
+      }),
+    )
+    const dialog = await screen.findByRole('dialog', {
+      name: 'TP-023 task details',
+    })
+    await user.selectOptions(
+      within(dialog).getByLabelText('Evidence type'),
+      'PullRequest',
+    )
+    await user.type(within(dialog).getByLabelText('Evidence URL'), evidence.url)
+    await user.type(
+      within(dialog).getByLabelText('Evidence note'),
+      evidence.note,
+    )
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Link evidence' }),
+    )
+
+    await waitFor(() =>
+      expect(evidenceBodies).toEqual([
+        {
+          type: 'PullRequest',
+          url: evidence.url,
+          note: evidence.note,
+        },
+      ]),
+    )
+    expect(
+      await within(dialog).findByRole('link', { name: 'Open evidence' }),
+    ).toHaveAttribute('href', evidence.url)
+
+    await user.type(
+      within(dialog).getByLabelText('Review comment'),
+      comment.body,
+    )
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Accept task' }),
+    )
+    await waitFor(() =>
+      expect(reviewBodies).toEqual([
+        {
+          decision: 'Accept',
+          comment: comment.body,
+          rowVersion: 'version-1',
+        },
+      ]),
+    )
+    expect(await screen.findByText('Task accepted')).toBeInTheDocument()
   })
 
   it('requires archive confirmation before removing the task from the active board', async () => {

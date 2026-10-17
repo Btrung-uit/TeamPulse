@@ -64,4 +64,14 @@ Khi thêm resource workspace-scoped mới, suite phải mở rộng cùng ma tr�
 - Leader tạo task với payload đã normalize và query được refresh sau mutation;
 - Member không thấy `New task` hoặc `Import Excel` để tránh UI hứa quyền không có.
 
+## Milestone 3 evidence and review coverage
+
+`TaskLifecycleTests`, `TaskEndpointsTests` và `TaskBoardFlow.test.tsx` bảo vệ:
+
+- URL relative, `javascript:` và protocol ngoài HTTP/HTTPS bị từ chối;
+- chỉ assignee hoặc Leader gắn evidence, evidence không tự hoàn thành task;
+- chỉ Leader ghi quyết định review khi task đang `In Review`;
+- accept/request changes lưu comment, đổi status và tạo activity trong cùng mutation;
+- Task Detail hiển thị external link an toàn, review history và form theo đúng quyền.
+
 Related: [[Definition of Done]], [[Task Data Integrity]], [[Excel Import Transaction]].

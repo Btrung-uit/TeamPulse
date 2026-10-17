@@ -117,6 +117,7 @@ public static class DependencyInjection
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IPlanningService, PlanningService>();
         services.AddScoped<ITaskService, TaskService>();
+        services.AddScoped<ITaskCollaborationService, TaskCollaborationService>();
 
         return services;
     }

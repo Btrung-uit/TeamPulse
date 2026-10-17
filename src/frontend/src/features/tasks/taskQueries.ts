@@ -3,10 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/useAuth'
 import { taskApi } from '@/features/tasks/taskApi'
 import type {
+  AddTaskEvidenceInput,
   ChangeTaskStatusInput,
   CreateTaskInput,
   TaskDetails,
   TaskFilters,
+  ReviewTaskInput,
   UpdateTaskInput,
 } from '@/features/tasks/types'
 
@@ -19,6 +21,11 @@ export const taskKeys = {
     [...taskKeys.project(workspaceId, projectId), 'detail', taskId] as const,
   dependencies: (workspaceId: string, projectId: string) =>
     [...taskKeys.project(workspaceId, projectId), 'dependencies'] as const,
+  collaboration: (workspaceId: string, projectId: string, taskId: string) =>
+    [
+      ...taskKeys.detail(workspaceId, projectId, taskId),
+      'collaboration',
+    ] as const,
   members: (workspaceId: string) => ['workspace-members', workspaceId] as const,
   sprints: (workspaceId: string, projectId: string) =>
     ['sprints', workspaceId, projectId] as const,
@@ -34,6 +41,21 @@ export function useTaskDetails(
   return useQuery({
     queryKey: taskKeys.detail(workspaceId, projectId, taskId ?? ''),
     queryFn: () => taskApi.get(accessToken!, workspaceId, projectId, taskId!),
+    enabled: Boolean(accessToken && workspaceId && projectId && taskId),
+  })
+}
+
+export function useTaskCollaboration(
+  workspaceId: string,
+  projectId: string,
+  taskId?: string,
+) {
+  const { accessToken } = useAuth()
+
+  return useQuery({
+    queryKey: taskKeys.collaboration(workspaceId, projectId, taskId ?? ''),
+    queryFn: () =>
+      taskApi.getCollaboration(accessToken!, workspaceId, projectId, taskId!),
     enabled: Boolean(accessToken && workspaceId && projectId && taskId),
   })
 }
@@ -145,6 +167,66 @@ export function useArchiveTask(
   return useMutation({
     mutationFn: (rowVersion: string) =>
       taskApi.archive(accessToken!, workspaceId, projectId, taskId, rowVersion),
+    onSuccess,
+  })
+}
+
+function useCollaborationMutationSuccess(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+) {
+  const queryClient = useQueryClient()
+
+  return async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: taskKeys.collaboration(workspaceId, projectId, taskId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: taskKeys.detail(workspaceId, projectId, taskId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: taskKeys.project(workspaceId, projectId),
+      }),
+    ])
+  }
+}
+
+export function useAddTaskEvidence(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+) {
+  const { accessToken } = useAuth()
+  const onSuccess = useCollaborationMutationSuccess(
+    workspaceId,
+    projectId,
+    taskId,
+  )
+
+  return useMutation({
+    mutationFn: (input: AddTaskEvidenceInput) =>
+      taskApi.addEvidence(accessToken!, workspaceId, projectId, taskId, input),
+    onSuccess,
+  })
+}
+
+export function useReviewTask(
+  workspaceId: string,
+  projectId: string,
+  taskId: string,
+) {
+  const { accessToken } = useAuth()
+  const onSuccess = useCollaborationMutationSuccess(
+    workspaceId,
+    projectId,
+    taskId,
+  )
+
+  return useMutation({
+    mutationFn: (input: ReviewTaskInput) =>
+      taskApi.review(accessToken!, workspaceId, projectId, taskId, input),
     onSuccess,
   })
 }
