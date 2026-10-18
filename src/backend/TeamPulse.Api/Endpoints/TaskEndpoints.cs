@@ -20,6 +20,10 @@ public static class TaskEndpoints
             .RequireAuthorization(WorkspacePolicies.Member);
 
         group.MapGet("/", ListAsync);
+        group.MapGet("/template", DownloadTemplateAsync)
+            .RequireAuthorization(WorkspacePolicies.Leader);
+        group.MapGet("/export", ExportAsync)
+            .RequireAuthorization(WorkspacePolicies.Leader);
         group.MapGet("/{taskId:guid}", GetAsync);
         group.MapPost("/", CreateAsync)
             .RequireAuthorization(WorkspacePolicies.Leader);
@@ -119,6 +123,111 @@ public static class TaskEndpoints
 
         return result.Succeeded
             ? Results.Ok(ToResponse(result.Value!))
+            : MapFailure(result.Failure);
+    }
+
+    private static async Task<IResult> DownloadTemplateAsync(
+        Guid workspaceId,
+        Guid projectId,
+        ITaskSpreadsheetService spreadsheetService,
+        CancellationToken cancellationToken)
+    {
+        var result = await spreadsheetService.CreateTemplateAsync(
+            workspaceId,
+            projectId,
+            cancellationToken);
+        return result.Succeeded
+            ? ToFileResult(result.Value!)
+            : MapFailure(result.Failure);
+    }
+
+    private static async Task<IResult> ExportAsync(
+        Guid workspaceId,
+        Guid projectId,
+        string? search,
+        string? status,
+        string? priority,
+        Guid? assigneeUserId,
+        Guid? sprintId,
+        DateOnly? dueBefore,
+        bool? includeArchived,
+        string? view,
+        bool? attention,
+        string? sort,
+        ITaskSpreadsheetService spreadsheetService,
+        CancellationToken cancellationToken)
+    {
+        var errors = new Dictionary<string, string[]>();
+        ProjectTaskStatus? parsedStatus = null;
+        TaskPriority? parsedPriority = null;
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (TryParseStatus(status, out var value))
+            {
+                parsedStatus = value;
+            }
+            else
+            {
+                errors["status"] = ["Unknown task status."];
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(priority))
+        {
+            if (TryParsePriority(priority, out var value))
+            {
+                parsedPriority = value;
+            }
+            else
+            {
+                errors["priority"] = ["Unknown task priority."];
+            }
+        }
+
+        if (assigneeUserId == Guid.Empty)
+        {
+            errors["assigneeUserId"] = ["Assignee ID cannot be empty."];
+        }
+
+        if (sprintId == Guid.Empty)
+        {
+            errors["sprintId"] = ["Sprint ID cannot be empty."];
+        }
+
+        var openOnly = string.Equals(view, "open", StringComparison.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(view) && !openOnly)
+        {
+            errors["view"] = ["Unknown task view."];
+        }
+
+        if (!TryParseExportSort(sort, out var parsedSort))
+        {
+            errors["sort"] = ["Unknown task sort."];
+        }
+
+        if (errors.Count > 0)
+        {
+            return ValidationError(errors);
+        }
+
+        var result = await spreadsheetService.ExportAsync(
+            workspaceId,
+            projectId,
+            new TaskSpreadsheetQuery(
+                NormalizeOptional(search),
+                parsedStatus,
+                parsedPriority,
+                assigneeUserId,
+                sprintId,
+                dueBefore,
+                includeArchived ?? false,
+                openOnly,
+                attention ?? false,
+                parsedSort),
+            cancellationToken);
+        return result.Succeeded
+            ? ToFileResult(result.Value!)
             : MapFailure(result.Failure);
     }
 
@@ -378,6 +487,19 @@ public static class TaskEndpoints
             Enum.IsDefined(priority);
     }
 
+    private static bool TryParseExportSort(string? value, out TaskExportSort sort)
+    {
+        sort = value?.Trim().ToLowerInvariant() switch
+        {
+            null or "" or "due-asc" => TaskExportSort.DueAscending,
+            "updated-desc" => TaskExportSort.UpdatedDescending,
+            "code-asc" => TaskExportSort.CodeAscending,
+            "priority-desc" => TaskExportSort.PriorityDescending,
+            _ => (TaskExportSort)(-1),
+        };
+        return Enum.IsDefined(sort);
+    }
+
     private static string NormalizeEnum(string? value) =>
         (value ?? string.Empty)
             .Replace(" ", string.Empty, StringComparison.Ordinal)
@@ -412,6 +534,9 @@ public static class TaskEndpoints
             "validation_failed",
             "Please correct the highlighted fields.",
             errors));
+
+    private static IResult ToFileResult(TaskSpreadsheetFile file) =>
+        Results.File(file.Content, file.ContentType, file.FileName);
 
     private static IResult MapFailure(TaskFailure failure) => failure switch
     {

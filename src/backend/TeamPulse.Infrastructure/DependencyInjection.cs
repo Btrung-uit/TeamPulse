@@ -121,6 +121,7 @@ public static class DependencyInjection
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IPlanningService, PlanningService>();
         services.AddScoped<ITaskService, TaskService>();
+        services.AddScoped<ITaskSpreadsheetService, TaskSpreadsheetService>();
         services.AddScoped<ITaskCollaborationService, TaskCollaborationService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IResourceService, ResourceService>();

@@ -16,6 +16,13 @@
   font-size: var(--font-size-md);
 }
 
+.task-board-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
 .task-toolbar {
   display: grid;
   grid-template-columns: minmax(220px, 1.6fr) repeat(4, minmax(150px, 1fr)) auto;
@@ -711,8 +718,16 @@
     margin-bottom: var(--space-5);
   }
 
-  .task-board-header > .ui-button {
+  .task-board-header__actions {
     width: 100%;
+  }
+
+  .task-board-header__actions > .ui-button {
+    width: 100%;
+  }
+
+  .task-board-download-action {
+    display: none;
   }
 
   .task-toolbar {

@@ -10,12 +10,25 @@ import type {
   TaskEvidence,
   TaskErrorBody,
   TaskFilters,
+  TaskSort,
   TaskSummary,
   ReviewTaskInput,
   TaskReviewResult,
   UpdateTaskInput,
   WorkspaceMemberOption,
 } from '@/features/tasks/types'
+
+export interface TaskSpreadsheetDownload {
+  blob: Blob
+  fileName: string
+}
+
+export interface TaskExportOptions {
+  filters: TaskFilters
+  view?: 'open'
+  attention?: boolean
+  sort: TaskSort
+}
 
 export class TaskApiError extends Error {
   constructor(
@@ -65,6 +78,48 @@ async function request<T>(
   return (await response.json()) as T
 }
 
+async function requestSpreadsheet(
+  path: string,
+  accessToken: string,
+): Promise<TaskSpreadsheetDownload> {
+  const response = await fetch(path, {
+    credentials: 'include',
+    headers: {
+      Accept:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    const fallback: TaskErrorBody = {
+      code: 'spreadsheet_download_failed',
+      message: 'Unable to download the spreadsheet. Please try again.',
+    }
+    try {
+      const body = (await response.json()) as Partial<TaskErrorBody>
+      throw new TaskApiError(response.status, {
+        code: body.code ?? fallback.code,
+        message: body.message ?? fallback.message,
+        errors: body.errors,
+      })
+    } catch (error) {
+      if (error instanceof TaskApiError) throw error
+      throw new TaskApiError(response.status, fallback)
+    }
+  }
+
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+  const plainName = disposition.match(/filename="?([^";]+)"?/i)?.[1]
+  return {
+    blob: await response.blob(),
+    fileName: encodedName
+      ? decodeURIComponent(encodedName)
+      : (plainName ?? 'teampulse-tasks.xlsx'),
+  }
+}
+
 function projectPath(workspaceId: string, projectId: string) {
   return `/api/workspaces/${workspaceId}/projects/${projectId}`
 }
@@ -91,7 +146,50 @@ function taskListPath(
   return `${projectPath(workspaceId, projectId)}/tasks?${query}`
 }
 
+function taskExportPath(
+  workspaceId: string,
+  projectId: string,
+  options: TaskExportOptions,
+) {
+  const query = new URLSearchParams()
+  const { filters } = options
+  if (filters.search) query.set('search', filters.search)
+  if (filters.status) query.set('status', filters.status)
+  if (filters.priority) query.set('priority', filters.priority)
+  if (filters.assigneeUserId) {
+    query.set('assigneeUserId', filters.assigneeUserId)
+  }
+  if (filters.sprintId) query.set('sprintId', filters.sprintId)
+  if (options.view) query.set('view', options.view)
+  if (options.attention) query.set('attention', 'true')
+  query.set('sort', options.sort)
+  return `${projectPath(workspaceId, projectId)}/tasks/export?${query}`
+}
+
 export const taskApi = {
+  downloadTemplate(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+  ) {
+    return requestSpreadsheet(
+      `${projectPath(workspaceId, projectId)}/tasks/template`,
+      accessToken,
+    )
+  },
+
+  exportSnapshot(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    options: TaskExportOptions,
+  ) {
+    return requestSpreadsheet(
+      taskExportPath(workspaceId, projectId, options),
+      accessToken,
+    )
+  },
+
   async listAll(
     accessToken: string,
     workspaceId: string,

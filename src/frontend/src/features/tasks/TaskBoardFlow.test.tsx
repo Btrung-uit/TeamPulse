@@ -257,6 +257,97 @@ describe('task board flow', () => {
     })
   })
 
+  it('exports the current project filters and offers a leader template', async () => {
+    const createObjectUrl = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockReturnValue('blob:task-snapshot')
+    const revokeObjectUrl = vi
+      .spyOn(URL, 'revokeObjectURL')
+      .mockImplementation(() => undefined)
+    const anchorClick = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined)
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input)
+      const optionResponse = optionsResponse(path)
+      if (optionResponse) return optionResponse
+      if (path.includes('/tasks/export?')) {
+        return new Response(new Blob(['xlsx']), {
+          headers: {
+            'Content-Type':
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition':
+              "attachment; filename*=UTF-8''teampulse-mvp-tasks.xlsx",
+          },
+        })
+      }
+      if (path.includes('/tasks?')) return jsonResponse(taskPage([task]))
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?priority=High&view=open&attention=true&sort=code-asc',
+    )
+
+    expect(
+      await screen.findByRole('button', { name: 'Download template' }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Export snapshot' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /tasks\/export\?.*priority=High.*view=open.*attention=true.*sort=code-asc/,
+        ),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-token',
+          }),
+        }),
+      )
+    })
+    expect(createObjectUrl).toHaveBeenCalledWith(expect.any(Blob))
+    expect(anchorClick).toHaveBeenCalledOnce()
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:task-snapshot')
+    expect(await screen.findByText('Snapshot exported')).toBeInTheDocument()
+  })
+
+  it('shows a safe error when spreadsheet export fails', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input)
+      const optionResponse = optionsResponse(path)
+      if (optionResponse) return optionResponse
+      if (path.includes('/tasks/export?')) {
+        return jsonResponse(
+          {
+            code: 'spreadsheet_unavailable',
+            message: 'Export is temporarily unavailable.',
+          },
+          503,
+        )
+      }
+      if (path.includes('/tasks?')) return jsonResponse(taskPage([task]))
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard()
+    await user.click(
+      await screen.findByRole('button', { name: 'Export snapshot' }),
+    )
+
+    expect(
+      await screen.findByText('Spreadsheet download failed'),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText('Export is temporarily unavailable.'),
+    ).toBeInTheDocument()
+  })
+
   it('lets a leader create a task and refreshes the board', async () => {
     let wasCreated = false
     const fetchMock = vi.fn(
@@ -404,6 +495,10 @@ describe('task board flow', () => {
       screen.queryByRole('button', { name: 'New task' }),
     ).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Import Excel/ })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Download template' }),
+    ).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Export snapshot' })).toBeNull()
   })
 
   it('opens task detail from a card and preserves board filters in the URL', async () => {
