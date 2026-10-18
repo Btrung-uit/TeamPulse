@@ -5,7 +5,7 @@ status: accepted
 area: ux
 tags: [teampulse/ux, screen, tasks]
 created: 2026-10-14
-updated: 2026-10-17
+updated: 2026-10-18
 ---
 
 # Task Detail Screen
@@ -17,5 +17,7 @@ Permission quyết định field được edit. Task có evidence/history chỉ 
 `TP-024` triển khai card mở panel qua query param `task`, giữ nguyên search/filter/sort của board. Desktop dùng right side panel; dưới `768px` panel chiếm toàn viewport. Leader được sửa nội dung, planning, dependency và archive; Member chỉ có các transition mà quan hệ assignee/reviewer cho phép; Advisor đọc-only. Task archive luôn cần confirm modal.
 
 Mọi mutation gửi `RowVersion`. Khi API trả `task_conflict`, draft của người dùng không bị xóa và UI giải thích task đã đổi ở nơi khác. `Review latest` tải lại dữ liệu server; `Retry my action` là lựa chọn explicit dùng token mới nhất, không tự động ghi đè ngầm. Detail trả thêm `statusBeforeBlocked` để client chỉ hiển thị đúng transition phục hồi từ `Blocked`.
+
+Trên desktop, task chưa archive có thêm `Git Command Generator` trong management mode. Người dùng chọn branch type, commit type, sửa commit summary, nhập từng đường dẫn file cần stage rồi copy từng lệnh hoặc toàn bộ sequence. Generator chỉ tạo hướng dẫn, luôn gắn Task Code vào branch/commit, không chạy command, không tạo `git add .` và không push trực tiếp vào `main`. Mobile ẩn công cụ này vì mobile chỉ phục vụ monitoring và thao tác nhanh.
 
 Related: [[Task Board Screen]], [[Evidence and Review]], [[Permission Matrix]].
