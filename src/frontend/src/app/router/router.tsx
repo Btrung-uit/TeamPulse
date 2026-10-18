@@ -7,6 +7,7 @@ import { DashboardRoute } from '@/app/router/DashboardRoute'
 import { ProtectedRoute, PublicOnlyRoute } from '@/features/auth/ProtectedRoute'
 import { AuthPage } from '@/features/auth/pages/AuthPage'
 import { ProjectListPage } from '@/features/projects/pages/ProjectListPage'
+import { ResourceHubPage } from '@/features/resources/pages/ResourceHubPage'
 import {
   ProjectProviderRoute,
   ProjectRequiredRoute,
@@ -109,13 +110,7 @@ export const router = createBrowserRouter([
                           },
                           {
                             path: 'resources',
-                            element: (
-                              <PlaceholderPage
-                                eyebrow="Resources"
-                                title="Resource hub"
-                                description="Project documents, repositories, demos and presentation links will be organized here."
-                              />
-                            ),
+                            element: <ResourceHubPage />,
                           },
                           {
                             path: 'presentation',

@@ -84,4 +84,14 @@ Khi thêm resource workspace-scoped mới, suite phải mở rộng cùng ma tr�
 - KPI dẫn tới Task Board với filter open, review hoặc attention tương ứng;
 - dữ liệu thật, first-use state và các nhánh loading/error được render ổn định.
 
+## Milestone 3 Resource Hub coverage
+
+`ResourceEndpointsTests` và `ResourceHubFlow.test.tsx` bảo vệ:
+
+- URL chỉ nhận HTTP/HTTPS; owner là active workspace member và linked task thuộc cùng project;
+- mọi member đọc được nhưng Resource metadata mutation chỉ dành cho Leader;
+- search không phân biệt hoa thường, type filter và project/tenant boundary không làm rò dữ liệu;
+- liên kết Resource với task không tự tạo Task Evidence;
+- desktop có metadata preview/manage actions, mobile giữ search/open/copy và Member dùng read-only mode.
+
 Related: [[Definition of Done]], [[Task Data Integrity]], [[Excel Import Transaction]].
