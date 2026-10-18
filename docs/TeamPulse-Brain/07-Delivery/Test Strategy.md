@@ -106,4 +106,16 @@ Khi thêm resource workspace-scoped mới, suite phải mở rộng cùng ma tr�
 - copy từng command tạo success toast, lỗi clipboard tạo error toast;
 - entry point chỉ xuất hiện trong Task Detail management mode trên desktop và được ẩn ở mobile.
 
+## Milestone 4 Excel template and snapshot coverage
+
+`TaskSpreadsheetEndpointsTests` và `TaskBoardFlow.test.tsx` bảo vệ:
+
+- chỉ Leader tải template/export; Member không thấy action và bị API từ chối;
+- workbook template có đúng tám cột, sheet nhập liệu trống, sheet ví dụ riêng và data validation;
+- export giữ project/tenant boundary, filter, attention view và sort hiện tại;
+- deadline là Excel date, estimate là number và dependency được xuất bằng predecessor Task Code;
+- text do người dùng nhập vẫn là cell text, không bị diễn giải thành Excel formula;
+- frontend gửi Bearer token, tải blob với filename từ response và hiển thị success/error toast;
+- action Excel chỉ xuất hiện trong Task Board desktop, không mở rộng mobile monitoring scope.
+
 Related: [[Definition of Done]], [[Task Data Integrity]], [[Excel Import Transaction]].

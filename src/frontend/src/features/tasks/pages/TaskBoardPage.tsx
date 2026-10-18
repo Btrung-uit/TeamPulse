@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import {
   ArrowDownAZ,
   CalendarClock,
+  Download,
+  FileSpreadsheet,
   FilterX,
   ListFilter,
   Plus,
@@ -15,6 +17,7 @@ import { EmptyState } from '@/components/ui/EmptyState/EmptyState'
 import { Input } from '@/components/ui/Input/Input'
 import { TaskCard } from '@/components/ui/TaskCard/TaskCard'
 import { useProject } from '@/features/projects/useProject'
+import { useAuth } from '@/features/auth/useAuth'
 import { CreateTaskModal } from '@/features/tasks/components/CreateTaskModal'
 import { TaskDetailPanel } from '@/features/tasks/components/TaskDetailPanel'
 import { TaskSelectField as SelectField } from '@/features/tasks/components/TaskSelectField'
@@ -29,9 +32,11 @@ import {
   statusForCard,
   taskColumns,
 } from '@/features/tasks/taskBoardModel'
+import { taskApi, TaskApiError } from '@/features/tasks/taskApi'
 import { useTaskOptions, useTasks } from '@/features/tasks/taskQueries'
 import type { TaskFilters, TaskStatus } from '@/features/tasks/types'
 import { useWorkspace } from '@/features/workspaces/useWorkspace'
+import { useToast } from '@/components/ui/Toast/useToast'
 
 function TaskBoardSkeleton() {
   return (
@@ -80,10 +85,15 @@ function readStatus(value: string | null) {
 }
 
 export function TaskBoardPage() {
+  const { accessToken } = useAuth()
+  const { showToast } = useToast()
   const { currentWorkspace } = useWorkspace()
   const { currentProject } = useProject()
   const [searchParams, setSearchParams] = useSearchParams()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [activeDownload, setActiveDownload] = useState<
+    'template' | 'export' | null
+  >(null)
   const workspaceId = currentWorkspace!.id
   const projectId = currentProject!.id
   const canManage = currentWorkspace?.role === 'Leader'
@@ -133,6 +143,50 @@ export function TaskBoardPage() {
     attentionOnly,
   )
 
+  async function downloadSpreadsheet(kind: 'template' | 'export') {
+    if (!accessToken) return
+    setActiveDownload(kind)
+    try {
+      const download =
+        kind === 'template'
+          ? await taskApi.downloadTemplate(accessToken, workspaceId, projectId)
+          : await taskApi.exportSnapshot(accessToken, workspaceId, projectId, {
+              filters,
+              view: view === 'open' ? 'open' : undefined,
+              attention: attentionOnly,
+              sort,
+            })
+      const objectUrl = URL.createObjectURL(download.blob)
+      const anchor = document.createElement('a')
+      anchor.href = objectUrl
+      anchor.download = download.fileName
+      document.body.append(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(objectUrl)
+      showToast({
+        title:
+          kind === 'template' ? 'Template downloaded' : 'Snapshot exported',
+        description:
+          kind === 'template'
+            ? 'Use the Tasks sheet for import and keep the example sheet as guidance.'
+            : 'The workbook matches this project and the active board filters.',
+        variant: 'success',
+      })
+    } catch (error) {
+      showToast({
+        title: 'Spreadsheet download failed',
+        description:
+          error instanceof TaskApiError
+            ? error.body.message
+            : 'Please try again when the API is available.',
+        variant: 'error',
+      })
+    } finally {
+      setActiveDownload(null)
+    }
+  }
+
   function setQueryParam(name: string, value: string) {
     setSearchParams(
       (current) => {
@@ -181,14 +235,40 @@ export function TaskBoardPage() {
           <h1>Task board</h1>
           <p>Plan the workflow, spot bottlenecks and keep ownership visible.</p>
         </div>
-        {canManage && (
-          <Button
-            leadingIcon={<Plus size={17} />}
-            onClick={() => setIsCreateOpen(true)}
-          >
-            New task
-          </Button>
-        )}
+        <div className="task-board-header__actions">
+          {canManage && (
+            <Button
+              className="task-board-download-action"
+              variant="ghost"
+              leadingIcon={<FileSpreadsheet size={17} />}
+              isLoading={activeDownload === 'template'}
+              disabled={activeDownload !== null}
+              onClick={() => void downloadSpreadsheet('template')}
+            >
+              Download template
+            </Button>
+          )}
+          {canManage && (
+            <Button
+              className="task-board-download-action"
+              variant="secondary"
+              leadingIcon={<Download size={17} />}
+              isLoading={activeDownload === 'export'}
+              disabled={activeDownload !== null}
+              onClick={() => void downloadSpreadsheet('export')}
+            >
+              Export snapshot
+            </Button>
+          )}
+          {canManage && (
+            <Button
+              leadingIcon={<Plus size={17} />}
+              onClick={() => setIsCreateOpen(true)}
+            >
+              New task
+            </Button>
+          )}
+        </div>
       </header>
 
       <section className="task-toolbar" aria-label="Task board filters">

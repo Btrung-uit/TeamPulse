@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -62,7 +62,9 @@ describe('GitCommandGenerator', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'Get Git commands' }))
-    await user.type(screen.getByLabelText('Files to stage'), '../secret.txt')
+    fireEvent.change(screen.getByLabelText('Files to stage'), {
+      target: { value: '../secret.txt' },
+    })
 
     expect(screen.getByText(/Unsafe or non-explicit path/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy all' })).toBeDisabled()

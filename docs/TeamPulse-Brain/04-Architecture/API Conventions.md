@@ -5,7 +5,7 @@ status: accepted
 area: architecture
 tags: [teampulse/architecture, api]
 created: 2026-10-14
-updated: 2026-10-17
+updated: 2026-10-18
 ---
 
 # API Conventions
@@ -29,5 +29,7 @@ Error response dùng envelope ổn định:
 `TP-022` chốt pagination contract đầu tiên: list response trả `items`, `page`, `pageSize`, `totalCount`, `totalPages`; page bắt đầu từ `1`, page size trong `1..100`. Filter nằm trong query string để frontend có thể giữ state trong URL.
 
 Mutable Task trả `rowVersion` dạng Base64. Client phải gửi lại token này khi update, đổi status hoặc archive; token cũ nhận `409 task_conflict` và phải reload trước khi retry.
+
+Endpoint download `.xlsx` trả MIME type `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` và `Content-Disposition` có filename cụ thể. Template/export vẫn áp dụng workspace authorization và project ownership; project thuộc workspace khác phải trả `404` sau khi caller vượt qua membership check của workspace trong route.
 
 Related: [[Backend Boundaries]], [[Concurrency and Archive]], [[Open Questions]].
