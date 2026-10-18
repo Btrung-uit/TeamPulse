@@ -27,6 +27,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge/StatusBadge'
 import { useToast } from '@/components/ui/Toast/useToast'
 import { useAuth } from '@/features/auth/useAuth'
 import { TaskSelectField } from '@/features/tasks/components/TaskSelectField'
+import { GitCommandGenerator } from '@/features/tasks/components/GitCommandGenerator'
 import { TaskApiError } from '@/features/tasks/taskApi'
 import {
   allowedStatusTransitions,
@@ -761,6 +762,13 @@ export function TaskDetailPanel({
                   </div>
                 </section>
               </form>
+
+              {managementMode && !task.isArchived && (
+                <GitCommandGenerator
+                  taskCode={task.code}
+                  taskTitle={task.title}
+                />
+              )}
 
               <section
                 className="task-detail-section"

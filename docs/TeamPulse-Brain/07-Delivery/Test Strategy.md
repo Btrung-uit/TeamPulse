@@ -5,7 +5,7 @@ status: accepted
 area: delivery
 tags: [teampulse/delivery, testing]
 created: 2026-10-14
-updated: 2026-10-17
+updated: 2026-10-18
 ---
 
 # Test Strategy
@@ -93,5 +93,17 @@ Khi thêm resource workspace-scoped mới, suite phải mở rộng cùng ma tr�
 - search không phân biệt hoa thường, type filter và project/tenant boundary không làm rò dữ liệu;
 - liên kết Resource với task không tự tạo Task Evidence;
 - desktop có metadata preview/manage actions, mobile giữ search/open/copy và Member dùng read-only mode.
+
+## Milestone 3 Git Command Generator coverage
+
+`gitCommandModel.test.ts` và `GitCommandGenerator.test.tsx` bảo vệ:
+
+- branch và commit luôn chứa Task Code, đồng thời branch type và commit type có thể đổi;
+- tiêu đề tiếng Việt được chuyển thành branch slug ổn định và commit summary được chuẩn hóa;
+- generator không bao giờ tạo `git add .` hoặc push trực tiếp vào `main`;
+- chỉ explicit relative paths hợp lệ được stage; absolute path, traversal, wildcard và shell metacharacter bị từ chối;
+- thiếu path thì không sinh stage command và `Copy all` bị khóa;
+- copy từng command tạo success toast, lỗi clipboard tạo error toast;
+- entry point chỉ xuất hiện trong Task Detail management mode trên desktop và được ẩn ở mobile.
 
 Related: [[Definition of Done]], [[Task Data Integrity]], [[Excel Import Transaction]].

@@ -400,6 +400,116 @@
   font-size: var(--font-size-sm);
 }
 
+.git-command-entry > .ui-button {
+  justify-self: start;
+}
+
+.git-command-generator {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.git-command-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.git-command-summary {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+}
+
+.git-command-summary > div {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.git-command-summary span,
+.git-command-list span {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.git-command-summary code,
+.git-command-list code {
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: var(--font-size-xs);
+}
+
+.git-command-warning,
+.git-command-safety {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+}
+
+.git-command-warning {
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+}
+
+.git-command-warning > div {
+  display: grid;
+  gap: 3px;
+}
+
+.git-command-warning span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.git-command-list {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  counter-reset: git-step;
+}
+
+.git-command-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  counter-increment: git-step;
+}
+
+.git-command-list li > div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.git-command-list span::before {
+  content: counter(git-step) '. ';
+}
+
+.git-command-safety {
+  align-items: center;
+  color: var(--color-success);
+  background: var(--color-success-soft);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
 .task-detail-form {
   display: grid;
   gap: var(--space-4);
@@ -654,6 +764,14 @@
   }
 
   .task-detail-form__row {
+    grid-template-columns: 1fr;
+  }
+
+  .git-command-entry {
+    display: none;
+  }
+
+  .git-command-form-row {
     grid-template-columns: 1fr;
   }
 }
