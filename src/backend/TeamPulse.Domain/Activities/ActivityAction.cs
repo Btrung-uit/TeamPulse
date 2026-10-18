@@ -23,4 +23,7 @@ public enum ActivityAction
     TaskEvidenceAdded,
     TaskReviewAccepted,
     TaskChangesRequested,
+    ResourceCreated,
+    ResourceUpdated,
+    ResourceDeleted,
 }

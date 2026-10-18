@@ -245,6 +245,67 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TeamPulse.Domain.Resources.ProjectResource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid?>("LinkedTaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("WorkspaceId", "ProjectId", "Id");
+
+                    b.HasIndex("WorkspaceId", "OwnerUserId");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "LinkedTaskId");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "Type", "UpdatedAtUtc");
+
+                    b.ToTable("ProjectResources", (string)null);
+                });
+
             modelBuilder.Entity("TeamPulse.Domain.Tasks.ProjectTask", b =>
                 {
                     b.Property<Guid>("Id")
@@ -812,6 +873,34 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("CreatedByMember");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Resources.ProjectResource", b =>
+                {
+                    b.HasOne("TeamPulse.Domain.Workspaces.WorkspaceMember", "OwnerMember")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeamPulse.Domain.Projects.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ProjectId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TeamPulse.Domain.Tasks.ProjectTask", "LinkedTask")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ProjectId", "LinkedTaskId")
+                        .HasPrincipalKey("WorkspaceId", "ProjectId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("LinkedTask");
+
+                    b.Navigation("OwnerMember");
 
                     b.Navigation("Project");
                 });

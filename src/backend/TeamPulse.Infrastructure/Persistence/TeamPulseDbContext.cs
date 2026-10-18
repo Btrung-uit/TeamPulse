@@ -4,6 +4,7 @@ using TeamPulse.Application.Common.Interfaces;
 using TeamPulse.Domain.Activities;
 using TeamPulse.Domain.Common;
 using TeamPulse.Domain.Projects;
+using TeamPulse.Domain.Resources;
 using TeamPulse.Domain.Tasks;
 using TeamPulse.Domain.Users;
 using TeamPulse.Domain.Workspaces;
@@ -39,6 +40,8 @@ public sealed class TeamPulseDbContext(
     public DbSet<TaskEvidence> TaskEvidence => Set<TaskEvidence>();
 
     public DbSet<TaskComment> TaskComments => Set<TaskComment>();
+
+    public DbSet<ProjectResource> ProjectResources => Set<ProjectResource>();
 
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
 
@@ -91,6 +94,11 @@ public sealed class TeamPulseDbContext(
             .HasQueryFilter(comment =>
                 _workspaceScope.WorkspaceId.HasValue &&
                 comment.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<ProjectResource>()
+            .HasQueryFilter(resource =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                resource.WorkspaceId == _workspaceScope.WorkspaceId.Value);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
