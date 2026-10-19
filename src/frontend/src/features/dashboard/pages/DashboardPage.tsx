@@ -7,6 +7,7 @@ import {
   GitPullRequest,
   ListTodo,
   RefreshCw,
+  Presentation,
   TrendingUp,
   Users,
 } from 'lucide-react'
@@ -15,6 +16,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button/Button'
 import { EmptyState } from '@/components/ui/EmptyState/EmptyState'
 import { StatusBadge } from '@/components/ui/StatusBadge/StatusBadge'
+import { SystemState } from '@/components/ui/SystemState/SystemState'
 import { useDashboard } from '@/features/dashboard/dashboardQueries'
 import type { DashboardActivity } from '@/features/dashboard/types'
 import { projectPath } from '@/features/projects/projectPaths'
@@ -38,7 +40,12 @@ const statusLabels = {
 
 function DashboardSkeleton() {
   return (
-    <div className="dashboard-skeleton" aria-label="Loading dashboard">
+    <div
+      className="dashboard-skeleton"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading dashboard"
+    >
       <div className="metric-grid">
         {Array.from({ length: 4 }, (_, index) => (
           <div className="metric-card skeleton-block" key={index} />
@@ -90,17 +97,21 @@ function DashboardPage() {
 
   if (dashboardQuery.isError || !dashboard) {
     return (
-      <section className="dashboard-state" role="alert">
-        <CircleAlert aria-hidden="true" size={30} />
-        <h1>We could not load this dashboard.</h1>
-        <p>Your project data is safe. Retry when the API is available.</p>
-        <Button
-          leadingIcon={<RefreshCw size={17} />}
-          onClick={() => void dashboardQuery.refetch()}
-        >
-          Try again
-        </Button>
-      </section>
+      <SystemState
+        className="dashboard-state"
+        eyebrow="Connection issue"
+        title="We could not load this dashboard."
+        description="Your project data is safe. Retry when the API is available."
+        icon={<CircleAlert size={30} />}
+        primaryAction={
+          <Button
+            leadingIcon={<RefreshCw size={17} />}
+            onClick={() => void dashboardQuery.refetch()}
+          >
+            Try again
+          </Button>
+        }
+      />
     )
   }
 
@@ -112,6 +123,13 @@ function DashboardPage() {
             <p className="eyebrow">{currentProject!.name}</p>
             <h1>Project dashboard</h1>
           </div>
+          <Link
+            className="page-header__action"
+            to={`${projectBase}/presentation`}
+          >
+            Present project
+            <Presentation aria-hidden="true" size={17} />
+          </Link>
         </header>
         <EmptyState
           icon={<ListTodo size={26} />}
@@ -175,10 +193,19 @@ function DashboardPage() {
             Progress, workload and accepted contribution evidence in one view.
           </p>
         </div>
-        <Link className="page-header__action" to={`${projectBase}/my-tasks`}>
-          View my tasks
-          <ArrowUpRight aria-hidden="true" size={17} />
-        </Link>
+        <div className="page-header__actions">
+          <Link
+            className="page-header__action"
+            to={`${projectBase}/presentation`}
+          >
+            Present project
+            <Presentation aria-hidden="true" size={17} />
+          </Link>
+          <Link className="page-header__action" to={`${projectBase}/my-tasks`}>
+            View my tasks
+            <ArrowUpRight aria-hidden="true" size={17} />
+          </Link>
+        </div>
       </header>
 
       <section className="metric-grid" aria-label="Project summary">

@@ -39,6 +39,13 @@
     transform var(--motion-fast) var(--ease-standard);
 }
 
+.page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
 .page-header__action:hover {
   border-color: var(--color-border-strong);
 }
