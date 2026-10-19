@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
+    "screenshots": "node scripts/capture-demo-screenshots.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

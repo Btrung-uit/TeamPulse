@@ -75,14 +75,32 @@ internal sealed class TaskService(
         }
 
         var totalCount = await tasks.CountAsync(cancellationToken);
-        var entities = await AddResponseIncludes(tasks)
-            .OrderBy(task => task.IsArchived)
-            .ThenBy(task => task.DueOn == null)
-            .ThenBy(task => task.DueOn)
-            .ThenBy(task => task.Code)
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .ToListAsync(cancellationToken);
+        List<ProjectTask> entities;
+        var responseQuery = AddResponseIncludes(tasks);
+        if (dbContext.Database.IsInMemory())
+        {
+            // EF InMemory cannot compare the TaskCode value object when two tasks
+            // reach the final sort key. Materialize first and sort its scalar value.
+            entities = (await responseQuery.ToListAsync(cancellationToken))
+                .OrderBy(task => task.IsArchived)
+                .ThenBy(task => task.DueOn == null)
+                .ThenBy(task => task.DueOn)
+                .ThenBy(task => task.Code.Value, StringComparer.Ordinal)
+                .Skip((query.Page - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToList();
+        }
+        else
+        {
+            entities = await responseQuery
+                .OrderBy(task => task.IsArchived)
+                .ThenBy(task => task.DueOn == null)
+                .ThenBy(task => task.DueOn)
+                .ThenBy(task => task.Code)
+                .Skip((query.Page - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync(cancellationToken);
+        }
         var totalPages = totalCount == 0
             ? 0
             : (int)Math.Ceiling(totalCount / (double)query.PageSize);

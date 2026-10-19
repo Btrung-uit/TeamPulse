@@ -257,7 +257,6 @@
   justify-content: flex-end;
   background: rgb(0 0 0 / 42%);
   backdrop-filter: blur(2px);
-  animation: task-detail-fade-in var(--motion-fast) var(--ease-standard);
 }
 
 .task-detail-panel {
@@ -688,16 +687,9 @@
   font-size: var(--font-size-sm);
 }
 
-@keyframes task-detail-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
 @keyframes task-detail-slide-in {
   from {
     transform: translateX(32px);
-    opacity: 0;
   }
 }
 

@@ -26,6 +26,16 @@ TeamPulse không thay thế các công cụ chuyên dụng đó. Nó trở thàn
 Task → Evidence → Review → Contribution Report → Presentation
 ```
 
+## Ảnh sản phẩm thật
+
+Các ảnh dưới đây được chụp từ scenario tái tạo `UIT Software Engineering Team / CampusEvent`, không dùng mock UI.
+
+| Dashboard | Task board |
+| --- | --- |
+| [![CampusEvent dashboard](docs/screenshots/campusevent-dashboard.png)](docs/screenshots/campusevent-dashboard.png) | [![CampusEvent task board](docs/screenshots/campusevent-task-board.png)](docs/screenshots/campusevent-task-board.png) |
+
+[![CampusEvent Presentation Mode](docs/screenshots/campusevent-presentation.png)](docs/screenshots/campusevent-presentation.png)
+
 ## Đối tượng sử dụng
 
 - **Leader:** lập kế hoạch, phân công, theo dõi rủi ro và xác nhận đóng góp.
@@ -43,9 +53,8 @@ Task → Evidence → Review → Contribution Report → Presentation
 | Excel Onboarding     | Upload → map cột → validate/preview → xác nhận import; export báo cáo `.xlsx`   |
 | Resources            | Quản lý metadata/link của Google Docs, Drive, Canva, GitHub và bản demo         |
 | Presentation Mode    | Tóm tắt tiến độ, thành viên, contribution, tài nguyên và demo cho giảng viên    |
-| GitHub Collaboration | PR Waiting Room, webhook, tự gắn evidence và chuyển trạng thái theo PR workflow |
-| Notifications        | Task mới, deadline, comment, review request và trạng thái PR                    |
-| Mobile Monitoring    | Theo dõi tiến độ, My Tasks, Inbox, PR và Resources với thao tác rủi ro thấp     |
+
+GitHub webhook/PR automation, realtime notification và mobile workflow đầy đủ thuộc Phase 2–3; MVP hiện chỉ lưu liên kết evidence/resource do người dùng cung cấp.
 
 ## Quy tắc workflow quan trọng
 
@@ -59,17 +68,16 @@ Todo → In Progress → Evidence Linked → In Review → Done
 - Chỉ PR được merge vào nhánh đích hoặc leader xác nhận mới đưa task sang `Done`.
 - Task đã có lịch sử/evidence được archive thay vì hard-delete.
 
-## Nền tảng kỹ thuật dự kiến
+## Nền tảng kỹ thuật hiện tại
 
 | Phần           | Công nghệ                         |
 | -------------- | --------------------------------- |
 | Frontend       | React, TypeScript                 |
 | Backend        | ASP.NET Core Web API              |
 | Persistence    | SQL Server, Entity Framework Core |
-| Authentication | ASP.NET Core Identity, JWT        |
-| Realtime       | SignalR                           |
+| Authentication | ASP.NET Core Identity, JWT ngắn hạn + refresh cookie |
 | Excel          | ClosedXML                         |
-| Integration    | GitHub App, REST API, Webhooks    |
+| Integration    | Metadata/link ngoài; chưa có webhook tự động |
 | Delivery       | Docker Compose, GitHub Actions    |
 | Architecture   | Modular monolith trong monorepo   |
 
@@ -77,14 +85,55 @@ Todo → In Progress → Evidence Linked → In Review → Done
 
 ```mermaid
 flowchart LR
-    Web[React + TypeScript] -->|REST / SignalR| API[ASP.NET Core API]
+    Browser[Browser] --> Nginx[Nginx + React SPA]
+    Nginx -->|/api + /health| API[ASP.NET Core API]
     API --> App[Application]
     App --> Domain[Domain]
     App --> Infra[Infrastructure]
-    Infra --> DB[(SQL Server)]
-    Infra --> GitHub[GitHub]
-    Infra --> External[Docs / Drive / Canva links]
+    Infra --> EF[EF Core]
+    EF --> DB[(SQL Server)]
+    Infra -. lưu URL/metadata .-> External[GitHub / Docs / Drive / Canva]
 ```
+
+Backend là modular monolith: `Api` phụ trách HTTP/auth, `Application` chứa contract/use case, `Domain` giữ entity và invariant, `Infrastructure` hiện thực persistence và service. `WorkspaceId` là tenant boundary; authorization được kiểm tra ở endpoint/policy và query filter.
+
+## ERD rút gọn
+
+```mermaid
+erDiagram
+    USER ||--o{ WORKSPACE_MEMBER : joins
+    WORKSPACE ||--o{ WORKSPACE_MEMBER : contains
+    WORKSPACE ||--o{ PROJECT : owns
+    PROJECT ||--o{ SPRINT : plans
+    PROJECT ||--o{ TASK : contains
+    TASK ||--o{ TASK_DEPENDENCY : predecessor
+    TASK ||--o{ TASK_DEPENDENCY : successor
+    TASK ||--o{ TASK_EVIDENCE : proves
+    TASK ||--o{ TASK_COMMENT : reviews
+    PROJECT ||--o{ PROJECT_RESOURCE : links
+    WORKSPACE ||--o{ ACTIVITY_LOG : audits
+    PROJECT ||--o{ IMPORT_BATCH : imports
+    IMPORT_BATCH ||--o{ IMPORT_ERROR_ROW : reports
+```
+
+ERD chi tiết và invariant: [`m1-foundation-erd.md`](docs/diagrams/m1-foundation-erd.md), [`m2-task-domain-erd.md`](docs/diagrams/m2-task-domain-erd.md).
+
+## API overview
+
+Mọi route nghiệp vụ đều yêu cầu Bearer access token; refresh token nằm trong cookie `HttpOnly`. Các route lồng `workspaceId`/`projectId` được kiểm tra membership và role.
+
+| Nhóm | Route chính | Quyền ghi |
+| --- | --- | --- |
+| Auth | `/api/auth/register`, `/login`, `/refresh`, `/logout`, `/me` | Người dùng |
+| Workspace | `/api/workspaces`, `/{id}/members` | Leader quản lý member/role |
+| Project | `/api/workspaces/{wid}/projects` | Leader |
+| Planning | `/{pid}/sprints`, `/dependencies` | Leader |
+| Task | `/{pid}/tasks`, `/{taskId}/status` | Leader/member theo workflow |
+| Excel | `/{pid}/tasks/imports`, `/template`, `/export` | Leader import; member đọc/export |
+| Collaboration | `/{taskId}/evidence`, `/review` | Assignee/Leader; Leader review |
+| Dashboard/resource | `/{pid}/dashboard`, `/{pid}/resources` | Member đọc; Leader quản lý resource |
+
+Chi tiết task/import/export: [`docs/api/tasks.md`](docs/api/tasks.md); planning/dependency: [`docs/api/planning.md`](docs/api/planning.md).
 
 ## Cấu trúc repository
 
@@ -235,6 +284,28 @@ docker compose --profile app ps -a
 
 Mở `http://localhost:8080`; readiness công khai tại `http://localhost:8080/health/ready`. Hướng dẫn cấu hình production, deploy từ `main`, kiểm tra mobile, backup và rollback nằm trong [`docs/deployment/production-like.md`](docs/deployment/production-like.md).
 
+Tạo scenario portfolio hoàn chỉnh sau khi stack healthy:
+
+```powershell
+.\scripts\Seed-DemoScenario.ps1
+```
+
+Script gọi API như người dùng thật và có thể chạy lại an toàn. Nó tạo 4 tài khoản UIT demo, 1 workspace, project `CampusEvent`, 20 task có deadline/dependency, 3 evidence, 1 review được chấp nhận và 3 resource link. Không cần nhập tay hoặc chạy SQL. Tài khoản leader local: `bao.trung@teampulse.demo`; mật khẩu mặc định chỉ dành cho local là `TeamPulseDemo2026!` và có thể đổi bằng `-DemoPassword`.
+
+Nếu đổi `APP_PORT`, truyền API tương ứng, ví dụ:
+
+```powershell
+.\scripts\Seed-DemoScenario.ps1 -ApiBaseUrl http://localhost:8088/api
+```
+
+Chụp lại ảnh README từ chính dữ liệu vừa seed:
+
+```powershell
+cd src/frontend
+$env:TEAMPULSE_WEB_URL = "http://localhost:8080"
+npm run screenshots
+```
+
 ## Continuous Integration
 
 Workflow `CI` chạy trên mọi pull request vào `main`, mọi push lên `main` và khi kích hoạt thủ công. Bốn check ổn định là:
@@ -249,7 +320,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-TP-021 bổ sung planning API cho Sprint, gán task vào sprint và dependency graph. Hệ thống chặn self-dependency, dependency chéo project và cycle gián tiếp; successor nhận cảnh báo predecessor chưa xong/quá hạn hoặc deadline xung đột nhưng TeamPulse không tự thay đổi lịch. `Leader` quản trị planning, còn `Member`/`Advisor` chỉ đọc.
+MVP portfolio đã có auth, workspace membership, project/task/planning, transactional Excel onboarding, evidence/review, dashboard, Resource Hub, Presentation Mode, accessibility states, security hardening, E2E core flow và Docker production-like. GitHub automation, realtime notification và public cloud deployment chưa thuộc bản hiện tại.
 
 ## Project Brain
 

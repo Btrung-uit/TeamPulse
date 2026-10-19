@@ -537,8 +537,8 @@ internal sealed class TaskImportService(
             TaskCode.Parse(row.TaskCode),
             row.Title!,
             string.IsNullOrWhiteSpace(row.AssigneeEmail) ? null : memberIds[row.AssigneeEmail],
-            Enum.Parse<ProjectTaskStatus>(row.Status!, true),
-            Enum.Parse<TaskPriority>(row.Priority!, true),
+            Enum.Parse<ProjectTaskStatus>(NormalizeEnum(row.Status), true),
+            Enum.Parse<TaskPriority>(NormalizeEnum(row.Priority), true),
             dueOn,
             estimateHours,
             row.DependsOn);
@@ -644,9 +644,9 @@ internal sealed class TaskImportService(
         if (!string.IsNullOrWhiteSpace(row.AssigneeEmail) && !members.Contains(row.AssigneeEmail))
             Add("AssigneeEmail", "AssigneeEmail must belong to an active workspace member.", row.AssigneeEmail);
 
-        if (!Enum.TryParse<ProjectTaskStatus>(row.Status, true, out var status) || !Enum.IsDefined(status))
+        if (!Enum.TryParse<ProjectTaskStatus>(NormalizeEnum(row.Status), true, out var status) || !Enum.IsDefined(status))
             Add("Status", "Status is required and must be a supported task status.", row.Status);
-        if (!Enum.TryParse<TaskPriority>(row.Priority, true, out var priority) || !Enum.IsDefined(priority))
+        if (!Enum.TryParse<TaskPriority>(NormalizeEnum(row.Priority), true, out var priority) || !Enum.IsDefined(priority))
             Add("Priority", "Priority is required and must be Low, Medium, High, or Urgent.", row.Priority);
 
         if (!string.IsNullOrWhiteSpace(row.DueDate) && !TryDate(row.DueDateCell!, out _))
@@ -752,6 +752,12 @@ internal sealed class TaskImportService(
 
         return errors;
     }
+
+    private static string NormalizeEnum(string? value) =>
+        (value ?? string.Empty)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Replace("-", string.Empty, StringComparison.Ordinal)
+            .Replace("_", string.Empty, StringComparison.Ordinal);
 
     private static IEnumerable<string> SplitDependencies(string? value) =>
         string.IsNullOrWhiteSpace(value)

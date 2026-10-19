@@ -534,7 +534,7 @@ public sealed class TaskSpreadsheetEndpointsTests : IClassFixture<TeamPulseApiFa
         sheet.Cell("A3").SetValue("TP-202");
         sheet.Cell("B3").SetValue("Imported successor");
         sheet.Cell("C3").SetValue(memberEmail);
-        sheet.Cell("D3").SetValue("Todo");
+        sheet.Cell("D3").SetValue("In Progress");
         sheet.Cell("E3").SetValue("Medium");
         sheet.Cell("F3").SetValue(new DateTime(2026, 12, 2));
         sheet.Cell("G3").SetValue(3);
