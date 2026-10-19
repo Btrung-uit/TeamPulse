@@ -24,4 +24,10 @@
     <ProjectReference Include="..\..\..\src\backend\TeamPulse.Api\TeamPulse.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\..\database\seed\TeamPulse-Demo-Tasks.xlsx"
+          Link="Fixtures\TeamPulse-Demo-Tasks.xlsx"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

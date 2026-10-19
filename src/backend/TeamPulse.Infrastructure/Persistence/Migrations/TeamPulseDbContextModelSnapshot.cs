@@ -138,6 +138,150 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.ToTable("ActivityLogs", (string)null);
                 });
 
+            modelBuilder.Entity("TeamPulse.Domain.Imports.ImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ConfirmedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid?>("ConfirmedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<int>("ErrorRows")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ImportedTaskCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MappingJson")
+                        .HasMaxLength(2000)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SelectedSheet")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ValidRows")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "ConfirmedByUserId");
+
+                    b.HasIndex("WorkspaceId", "UploadedByUserId");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "CreatedAtUtc");
+
+                    b.ToTable("ImportBatches", (string)null);
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Imports.ImportErrorRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Column")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<Guid>("ImportBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RawValue")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("RowNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportBatchId", "RowNumber");
+
+                    b.ToTable("ImportErrorRows", (string)null);
+                });
+
             modelBuilder.Entity("TeamPulse.Domain.Projects.Project", b =>
                 {
                     b.Property<Guid>("Id")
@@ -838,6 +982,38 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.Navigation("Workspace");
                 });
 
+            modelBuilder.Entity("TeamPulse.Domain.Imports.ImportBatch", b =>
+                {
+                    b.HasOne("TeamPulse.Domain.Workspaces.WorkspaceMember", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ConfirmedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TeamPulse.Domain.Projects.Project", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ProjectId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TeamPulse.Domain.Workspaces.WorkspaceMember", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "UploadedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Imports.ImportErrorRow", b =>
+                {
+                    b.HasOne("TeamPulse.Domain.Imports.ImportBatch", "ImportBatch")
+                        .WithMany("Errors")
+                        .HasForeignKey("ImportBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ImportBatch");
+                });
+
             modelBuilder.Entity("TeamPulse.Domain.Projects.Project", b =>
                 {
                     b.HasOne("TeamPulse.Domain.Workspaces.Workspace", "Workspace")
@@ -1058,6 +1234,11 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Imports.ImportBatch", b =>
+                {
+                    b.Navigation("Errors");
                 });
 
             modelBuilder.Entity("TeamPulse.Domain.Projects.Project", b =>

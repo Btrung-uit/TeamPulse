@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -13,6 +14,37 @@ public sealed class TaskSpreadsheetEndpointsTests : IClassFixture<TeamPulseApiFa
     public TaskSpreadsheetEndpointsTests(TeamPulseApiFactory factory)
     {
         _factory = factory;
+    }
+
+    [Fact]
+    public async Task DemoSeedWorkbook_IsReadableByTheImportEndpoint()
+    {
+        using var leader = await RegisterAsync("Demo Seed Leader");
+        var workspaceId = await CreateWorkspaceAsync(leader.Client, "Demo Seed Workspace");
+        var projectId = await CreateProjectAsync(leader.Client, workspaceId, "Demo Seed Project");
+        var seedPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "Fixtures",
+            "TeamPulse-Demo-Tasks.xlsx");
+        var bytes = await File.ReadAllBytesAsync(seedPath);
+        using (var workbook = new XLWorkbook(new MemoryStream(bytes)))
+        {
+            var dueDate = workbook.Worksheet("Tasks").Cell("F2");
+            Assert.Equal(XLDataType.DateTime, dueDate.DataType);
+            Assert.Equal(new DateTime(2026, 10, 6), dueDate.GetDateTime());
+            Assert.Equal("yyyy-mm-dd", dueDate.Style.DateFormat.Format);
+        }
+
+        using var content = MultipartWorkbook(bytes, "TeamPulse-Demo-Tasks.xlsx");
+        var response = await leader.Client.PostAsync(
+            $"{TasksUrl(workspaceId, projectId)}/imports",
+            content);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var sheet = json.RootElement.GetProperty("sheets")[0];
+        Assert.Equal("Tasks", sheet.GetProperty("name").GetString());
+        Assert.Equal(20, sheet.GetProperty("dataRowCount").GetInt32());
     }
 
     [Fact]
@@ -155,6 +187,196 @@ public sealed class TaskSpreadsheetEndpointsTests : IClassFixture<TeamPulseApiFa
                 $"{TasksUrl(workspaceId, outsiderProjectId)}/export")).StatusCode);
     }
 
+    [Fact]
+    public async Task Import_IsLeaderOnlyAndPreviewReportsCellErrorsWithoutCreatingTasks()
+    {
+        using var leader = await RegisterAsync("Import Leader");
+        using var member = await RegisterAsync("Import Member");
+        var workspaceId = await CreateWorkspaceAsync(leader.Client, "Import Workspace");
+        await AddMemberAsync(leader.Client, workspaceId, member.Email, "Member");
+        var projectId = await CreateProjectAsync(leader.Client, workspaceId, "Import Project");
+        await CreateTaskAsync(
+            leader.Client,
+            workspaceId,
+            projectId,
+            "TP-100",
+            "Existing task",
+            member.UserId,
+            "Medium",
+            new DateOnly(2026, 11, 1),
+            2m);
+        var bytes = CreateImportWorkbook(member.Email);
+        var importUrl = $"{TasksUrl(workspaceId, projectId)}/imports";
+
+        using (var forbiddenContent = MultipartWorkbook(bytes, "tasks.xlsx"))
+        {
+            Assert.Equal(
+                HttpStatusCode.Forbidden,
+                (await member.Client.PostAsync(importUrl, forbiddenContent)).StatusCode);
+        }
+
+        using var content = MultipartWorkbook(bytes, "tasks.xlsx");
+        var upload = await leader.Client.PostAsync(importUrl, content);
+        Assert.Equal(HttpStatusCode.Created, upload.StatusCode);
+        using var uploaded = JsonDocument.Parse(await upload.Content.ReadAsStringAsync());
+        var root = uploaded.RootElement;
+        var batchId = root.GetProperty("batchId").GetGuid();
+        Assert.Equal("Plan", root.GetProperty("sheets")[0].GetProperty("name").GetString());
+        Assert.Equal(3, root.GetProperty("sheets")[0].GetProperty("dataRowCount").GetInt32());
+
+        var preview = await leader.Client.PutAsJsonAsync(
+            $"{importUrl}/{batchId}/preview",
+            new
+            {
+                sheetName = "Plan",
+                mapping = new
+                {
+                    taskCode = 1,
+                    title = 2,
+                    assigneeEmail = 3,
+                    status = 4,
+                    priority = 5,
+                    dueDate = 6,
+                    estimateHours = 7,
+                    dependsOn = 8,
+                },
+            });
+        preview.EnsureSuccessStatusCode();
+        using var previewJson = JsonDocument.Parse(await preview.Content.ReadAsStringAsync());
+        var previewRoot = previewJson.RootElement;
+        Assert.Equal("ValidationFailed", previewRoot.GetProperty("status").GetString());
+        Assert.Equal(3, previewRoot.GetProperty("totalRows").GetInt32());
+        Assert.Equal(0, previewRoot.GetProperty("validRows").GetInt32());
+        Assert.Equal(3, previewRoot.GetProperty("errorRows").GetInt32());
+        var reasons = previewRoot.GetProperty("rows")
+            .EnumerateArray()
+            .SelectMany(row => row.GetProperty("errors").EnumerateArray())
+            .Select(error => error.GetProperty("reason").GetString())
+            .ToArray();
+        Assert.Contains(reasons, reason => reason!.Contains("already exists", StringComparison.Ordinal));
+        Assert.Contains(reasons, reason => reason!.Contains("duplicated", StringComparison.Ordinal));
+        Assert.Contains(reasons, reason => reason!.Contains("active workspace member", StringComparison.Ordinal));
+        Assert.Contains(reasons, reason => reason!.Contains("valid Excel date", StringComparison.Ordinal));
+        Assert.Contains(reasons, reason => reason!.Contains("cannot depend on itself", StringComparison.Ordinal));
+
+        var rejectedConfirm = await leader.Client.PostAsync(
+            $"{importUrl}/{batchId}/confirm",
+            null);
+        Assert.Equal(HttpStatusCode.Conflict, rejectedConfirm.StatusCode);
+
+        var tasks = await leader.Client.GetFromJsonAsync<JsonElement>(TasksUrl(workspaceId, projectId));
+        Assert.Equal(1, tasks.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task Confirm_CreatesWholeBatchOnceAndRecordsHistoryAndActivity()
+    {
+        using var leader = await RegisterAsync("Confirm Leader");
+        using var member = await RegisterAsync("Confirm Member");
+        var workspaceId = await CreateWorkspaceAsync(leader.Client, "Confirm Workspace");
+        await AddMemberAsync(leader.Client, workspaceId, member.Email, "Member");
+        var projectId = await CreateProjectAsync(leader.Client, workspaceId, "Confirm Project");
+        var importUrl = $"{TasksUrl(workspaceId, projectId)}/imports";
+        using var content = MultipartWorkbook(CreateValidImportWorkbook(member.Email), "valid.xlsx");
+        var upload = await leader.Client.PostAsync(importUrl, content);
+        upload.EnsureSuccessStatusCode();
+        using var uploadJson = JsonDocument.Parse(await upload.Content.ReadAsStringAsync());
+        var batchId = uploadJson.RootElement.GetProperty("batchId").GetGuid();
+
+        var preview = await leader.Client.PutAsJsonAsync(
+            $"{importUrl}/{batchId}/preview",
+            new
+            {
+                sheetName = "Tasks",
+                mapping = new
+                {
+                    taskCode = 1,
+                    title = 2,
+                    assigneeEmail = 3,
+                    status = 4,
+                    priority = 5,
+                    dueDate = 6,
+                    estimateHours = 7,
+                    dependsOn = 8,
+                },
+            });
+        preview.EnsureSuccessStatusCode();
+        Assert.Equal(
+            0,
+            (await preview.Content.ReadFromJsonAsync<JsonElement>())
+                .GetProperty("errorRows")
+                .GetInt32());
+        Assert.Equal(HttpStatusCode.Forbidden, (await member.Client.GetAsync(importUrl)).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            (await member.Client.PostAsync($"{importUrl}/{batchId}/confirm", null)).StatusCode);
+
+        var firstConfirm = await leader.Client.PostAsync(
+            $"{importUrl}/{batchId}/confirm",
+            null);
+        firstConfirm.EnsureSuccessStatusCode();
+        var firstResult = await firstConfirm.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2, firstResult.GetProperty("importedTaskCount").GetInt32());
+        Assert.False(firstResult.GetProperty("alreadyConfirmed").GetBoolean());
+
+        var retryConfirm = await leader.Client.PostAsync(
+            $"{importUrl}/{batchId}/confirm",
+            null);
+        retryConfirm.EnsureSuccessStatusCode();
+        var retryResult = await retryConfirm.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2, retryResult.GetProperty("importedTaskCount").GetInt32());
+        Assert.True(retryResult.GetProperty("alreadyConfirmed").GetBoolean());
+
+        var tasks = await leader.Client.GetFromJsonAsync<JsonElement>(TasksUrl(workspaceId, projectId));
+        Assert.Equal(2, tasks.GetProperty("totalCount").GetInt32());
+        var dependencies = await leader.Client.GetFromJsonAsync<JsonElement>(
+            $"/api/workspaces/{workspaceId}/projects/{projectId}/dependencies");
+        Assert.Equal(1, dependencies.GetArrayLength());
+
+        var history = await leader.Client.GetFromJsonAsync<JsonElement>(importUrl);
+        Assert.Equal("Confirmed", history[0].GetProperty("status").GetString());
+        Assert.Equal(2, history[0].GetProperty("importedTaskCount").GetInt32());
+
+        var dashboard = await leader.Client.GetFromJsonAsync<JsonElement>(
+            $"/api/workspaces/{workspaceId}/projects/{projectId}/dashboard");
+        Assert.Equal(
+            2,
+            dashboard.GetProperty("recentActivity")
+                .EnumerateArray()
+                .Count(activity => activity.GetProperty("action").GetString() == "TaskCreated"));
+    }
+
+    [Fact]
+    public async Task Import_RejectsInvalidFormatAndOversizedFilesOnServer()
+    {
+        using var leader = await RegisterAsync("Import Guard Leader");
+        var workspaceId = await CreateWorkspaceAsync(leader.Client, "Import Guard Workspace");
+        var projectId = await CreateProjectAsync(leader.Client, workspaceId, "Import Guard Project");
+        using var content = MultipartWorkbook(CreateImportWorkbook(leader.Email), "tasks.csv");
+
+        var response = await leader.Client.PostAsync(
+            $"{TasksUrl(workspaceId, projectId)}/imports",
+            content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        using var malformed = MultipartWorkbook(
+            "this-is-not-an-excel-workbook"u8.ToArray(),
+            "tasks.xlsx");
+        var malformedResponse = await leader.Client.PostAsync(
+            $"{TasksUrl(workspaceId, projectId)}/imports",
+            malformed);
+        Assert.Equal(HttpStatusCode.BadRequest, malformedResponse.StatusCode);
+
+        using var oversized = MultipartWorkbook(
+            new byte[(5 * 1024 * 1024) + 1],
+            "tasks.xlsx");
+        var oversizedResponse = await leader.Client.PostAsync(
+            $"{TasksUrl(workspaceId, projectId)}/imports",
+            oversized);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, oversizedResponse.StatusCode);
+    }
+
     private async Task<RegisteredUser> RegisterAsync(string displayName)
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -253,6 +475,84 @@ public sealed class TaskSpreadsheetEndpointsTests : IClassFixture<TeamPulseApiFa
     {
         var bytes = await response.Content.ReadAsByteArrayAsync();
         return new XLWorkbook(new MemoryStream(bytes));
+    }
+
+    private static byte[] CreateImportWorkbook(string memberEmail)
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Plan");
+        for (var index = 0; index < ExpectedHeaders.Length; index++)
+        {
+            sheet.Cell(1, index + 1).SetValue(ExpectedHeaders[index]);
+        }
+
+        sheet.Cell("A2").SetValue("TP-100");
+        sheet.Cell("B2").SetValue("Conflicts with existing task");
+        sheet.Cell("C2").SetValue(memberEmail);
+        sheet.Cell("D2").SetValue("Todo");
+        sheet.Cell("E2").SetValue("High");
+        sheet.Cell("F2").SetValue(new DateTime(2026, 11, 2));
+        sheet.Cell("G2").SetValue(3);
+
+        sheet.Cell("A3").SetValue("TP-101");
+        sheet.Cell("B3").SetValue("Invalid mapped values");
+        sheet.Cell("C3").SetValue("unknown@example.com");
+        sheet.Cell("D3").SetValue("Unknown");
+        sheet.Cell("E3").SetValue("Extreme");
+        sheet.Cell("F3").SetValue("not-a-date");
+        sheet.Cell("G3").SetValue(-2);
+        sheet.Cell("H3").SetValue("TP-101");
+
+        sheet.Cell("A4").SetValue("TP-101");
+        sheet.Cell("B4").SetValue("Duplicate code");
+        sheet.Cell("D4").SetValue("Todo");
+        sheet.Cell("E4").SetValue("Low");
+        sheet.Cell("H4").SetValue("TP-999");
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
+    private static byte[] CreateValidImportWorkbook(string memberEmail)
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Tasks");
+        for (var index = 0; index < ExpectedHeaders.Length; index++)
+        {
+            sheet.Cell(1, index + 1).SetValue(ExpectedHeaders[index]);
+        }
+
+        sheet.Cell("A2").SetValue("TP-201");
+        sheet.Cell("B2").SetValue("Imported predecessor");
+        sheet.Cell("C2").SetValue(memberEmail);
+        sheet.Cell("D2").SetValue("Done");
+        sheet.Cell("E2").SetValue("High");
+        sheet.Cell("F2").SetValue(new DateTime(2026, 12, 1));
+        sheet.Cell("G2").SetValue(5.5);
+
+        sheet.Cell("A3").SetValue("TP-202");
+        sheet.Cell("B3").SetValue("Imported successor");
+        sheet.Cell("C3").SetValue(memberEmail);
+        sheet.Cell("D3").SetValue("Todo");
+        sheet.Cell("E3").SetValue("Medium");
+        sheet.Cell("F3").SetValue(new DateTime(2026, 12, 2));
+        sheet.Cell("G3").SetValue(3);
+        sheet.Cell("H3").SetValue("TP-201");
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
+    private static MultipartFormDataContent MultipartWorkbook(byte[] bytes, string fileName)
+    {
+        var content = new MultipartFormDataContent();
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new MediaTypeHeaderValue(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        content.Add(file, "file", fileName);
+        return content;
     }
 
     private static string TasksUrl(Guid workspaceId, Guid projectId) =>

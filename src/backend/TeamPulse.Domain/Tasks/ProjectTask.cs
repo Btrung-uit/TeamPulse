@@ -194,6 +194,17 @@ public sealed class ProjectTask : AuditableEntity
         HasStartedWorkflow = HasStartedWorkflow || targetStatus != ProjectTaskStatus.Todo;
     }
 
+    public void InitializeImportedStatus(ProjectTaskStatus status)
+    {
+        EnsureMutable();
+        EnsureValidStatus(status);
+        Status = status;
+        StatusBeforeBlocked = status == ProjectTaskStatus.Blocked
+            ? ProjectTaskStatus.Todo
+            : null;
+        HasStartedWorkflow = status != ProjectTaskStatus.Todo;
+    }
+
     public void Archive(DateTimeOffset archivedAtUtc)
     {
         if (IsArchived)

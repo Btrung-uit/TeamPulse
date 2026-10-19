@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TeamPulse.Application.Common.Interfaces;
 using TeamPulse.Domain.Activities;
 using TeamPulse.Domain.Common;
+using TeamPulse.Domain.Imports;
 using TeamPulse.Domain.Projects;
 using TeamPulse.Domain.Resources;
 using TeamPulse.Domain.Tasks;
@@ -42,6 +43,10 @@ public sealed class TeamPulseDbContext(
     public DbSet<TaskComment> TaskComments => Set<TaskComment>();
 
     public DbSet<ProjectResource> ProjectResources => Set<ProjectResource>();
+
+    public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
+
+    public DbSet<ImportErrorRow> ImportErrorRows => Set<ImportErrorRow>();
 
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
 
@@ -99,6 +104,16 @@ public sealed class TeamPulseDbContext(
             .HasQueryFilter(resource =>
                 _workspaceScope.WorkspaceId.HasValue &&
                 resource.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<ImportBatch>()
+            .HasQueryFilter(batch =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                batch.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<ImportErrorRow>()
+            .HasQueryFilter(error =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                error.ImportBatch.WorkspaceId == _workspaceScope.WorkspaceId.Value);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

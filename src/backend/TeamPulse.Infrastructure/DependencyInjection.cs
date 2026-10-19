@@ -39,22 +39,12 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString(TeamPulseConnectionString);
-
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException(
-                $"Connection string '{TeamPulseConnectionString}' is required. " +
-                "Configure it with .NET User Secrets or an environment variable.");
-        }
-
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<WorkspaceScope>();
         services.AddScoped<IWorkspaceScope>(provider =>
             provider.GetRequiredService<WorkspaceScope>());
 
-        services.AddDbContext<TeamPulseDbContext>(options =>
-            options.UseSqlServer(connectionString));
+        AddDatabase(services, configuration);
 
         var jwtSection = configuration.GetRequiredSection(JwtOptions.SectionName);
         var jwtOptions = jwtSection.Get<JwtOptions>()
@@ -122,11 +112,39 @@ public static class DependencyInjection
         services.AddScoped<IPlanningService, PlanningService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<ITaskSpreadsheetService, TaskSpreadsheetService>();
+        services.AddScoped<ITaskImportService, TaskImportService>();
         services.AddScoped<ITaskCollaborationService, TaskCollaborationService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IResourceService, ResourceService>();
 
         return services;
+    }
+
+    private static void AddDatabase(
+        IServiceCollection services,
+        IConfiguration configuration)
+    {
+        if (string.Equals(
+                configuration["Database:Provider"],
+                "InMemory",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var databaseName = configuration["Database:Name"] ?? "TeamPulse";
+            services.AddDbContext<TeamPulseDbContext>(options =>
+                options.UseInMemoryDatabase(databaseName));
+            return;
+        }
+
+        var connectionString = configuration.GetConnectionString(TeamPulseConnectionString);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                $"Connection string '{TeamPulseConnectionString}' is required. " +
+                "Configure it with .NET User Secrets or an environment variable.");
+        }
+
+        services.AddDbContext<TeamPulseDbContext>(options =>
+            options.UseSqlServer(connectionString));
     }
 
     private static void ValidateJwtOptions(JwtOptions options)

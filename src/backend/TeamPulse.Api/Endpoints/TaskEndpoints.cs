@@ -1,9 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using TeamPulse.Api.Contracts;
 using TeamPulse.Application.Tasks;
 using TeamPulse.Domain.Tasks;
 using TeamPulse.Infrastructure.Authorization;
+using TeamPulse.Api.Security;
 
 namespace TeamPulse.Api.Endpoints;
 
@@ -24,6 +26,20 @@ public static class TaskEndpoints
             .RequireAuthorization(WorkspacePolicies.Leader);
         group.MapGet("/export", ExportAsync)
             .RequireAuthorization(WorkspacePolicies.Leader);
+        group.MapPost("/imports", UploadImportAsync)
+            .DisableAntiforgery()
+            .Accepts<IFormFile>("multipart/form-data")
+            .WithMetadata(new RequestSizeLimitAttribute(6 * 1024 * 1024))
+            .RequireRateLimiting(SecurityPolicies.ImportRateLimit)
+            .RequireAuthorization(WorkspacePolicies.Leader);
+        group.MapGet("/imports", ListImportHistoryAsync)
+            .RequireAuthorization(WorkspacePolicies.Leader);
+        group.MapPut("/imports/{batchId:guid}/preview", PreviewImportAsync)
+            .RequireRateLimiting(SecurityPolicies.ImportRateLimit)
+            .RequireAuthorization(WorkspacePolicies.Leader);
+        group.MapPost("/imports/{batchId:guid}/confirm", ConfirmImportAsync)
+            .RequireRateLimiting(SecurityPolicies.ImportRateLimit)
+            .RequireAuthorization(WorkspacePolicies.Leader);
         group.MapGet("/{taskId:guid}", GetAsync);
         group.MapPost("/", CreateAsync)
             .RequireAuthorization(WorkspacePolicies.Leader);
@@ -34,6 +50,109 @@ public static class TaskEndpoints
             .RequireAuthorization(WorkspacePolicies.Leader);
 
         return endpoints;
+    }
+
+    private static async Task<IResult> UploadImportAsync(
+        Guid workspaceId,
+        Guid projectId,
+        IFormFile? file,
+        ClaimsPrincipal principal,
+        ITaskImportService importService,
+        CancellationToken cancellationToken)
+    {
+        if (file is null)
+        {
+            return ValidationError(new Dictionary<string, string[]>
+            {
+                ["file"] = ["An .xlsx workbook is required."],
+            });
+        }
+
+        await using var stream = file.OpenReadStream();
+        var result = await importService.UploadAsync(
+            workspaceId,
+            projectId,
+            GetRequiredUserId(principal),
+            file.FileName,
+            stream,
+            cancellationToken);
+        return result.Succeeded
+            ? Results.Created(
+                $"/api/workspaces/{workspaceId}/projects/{projectId}/tasks/imports/{result.Value!.BatchId}",
+                result.Value)
+            : MapImportFailure(result.Failure, result.Detail);
+    }
+
+    private static async Task<IResult> PreviewImportAsync(
+        Guid workspaceId,
+        Guid projectId,
+        Guid batchId,
+        PreviewTaskImportRequest request,
+        ITaskImportService importService,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.SheetName) || request.Mapping is null)
+        {
+            return ValidationError(new Dictionary<string, string[]>
+            {
+                ["mapping"] = ["A sheet and column mapping are required."],
+            });
+        }
+
+        var mapping = request.Mapping;
+        var result = await importService.PreviewAsync(
+            workspaceId,
+            projectId,
+            batchId,
+            new TaskImportPreviewCommand(
+                request.SheetName.Trim(),
+                new TaskImportMapping(
+                    mapping.TaskCode,
+                    mapping.Title,
+                    mapping.AssigneeEmail,
+                    mapping.Status,
+                    mapping.Priority,
+                    mapping.DueDate,
+                    mapping.EstimateHours,
+                    mapping.DependsOn)),
+            cancellationToken);
+        return result.Succeeded
+            ? Results.Ok(result.Value)
+            : MapImportFailure(result.Failure, result.Detail);
+    }
+
+    private static async Task<IResult> ConfirmImportAsync(
+        Guid workspaceId,
+        Guid projectId,
+        Guid batchId,
+        ClaimsPrincipal principal,
+        ITaskImportService importService,
+        CancellationToken cancellationToken)
+    {
+        var result = await importService.ConfirmAsync(
+            workspaceId,
+            projectId,
+            batchId,
+            GetRequiredUserId(principal),
+            cancellationToken);
+        return result.Succeeded
+            ? Results.Ok(result.Value)
+            : MapImportFailure(result.Failure, result.Detail);
+    }
+
+    private static async Task<IResult> ListImportHistoryAsync(
+        Guid workspaceId,
+        Guid projectId,
+        ITaskImportService importService,
+        CancellationToken cancellationToken)
+    {
+        var result = await importService.ListHistoryAsync(
+            workspaceId,
+            projectId,
+            cancellationToken);
+        return result.Succeeded
+            ? Results.Ok(result.Value)
+            : MapImportFailure(result.Failure, result.Detail);
     }
 
     private static async Task<IResult> ListAsync(
@@ -580,6 +699,47 @@ public static class TaskEndpoints
             "Project was not found.")),
     };
 
+    private static IResult MapImportFailure(TaskImportFailure failure, string? detail) => failure switch
+    {
+        TaskImportFailure.ProjectArchived => Conflict(
+            "project_archived",
+            "Archived projects cannot be changed."),
+        TaskImportFailure.BatchConfirmed => Conflict(
+            "import_already_confirmed",
+            "A confirmed import cannot be previewed again."),
+        TaskImportFailure.FileTooLarge => Results.Json(
+            new ApiErrorResponse("import_file_too_large", "The workbook cannot exceed 5 MB."),
+            statusCode: StatusCodes.Status413PayloadTooLarge),
+        TaskImportFailure.InvalidFileType => Results.BadRequest(new ApiErrorResponse(
+            "invalid_import_file_type",
+            "Only .xlsx workbooks are supported.")),
+        TaskImportFailure.InvalidWorkbook or TaskImportFailure.WorkbookEmpty =>
+            Results.BadRequest(new ApiErrorResponse(
+                "invalid_import_workbook",
+                detail ?? "The workbook could not be read.")),
+        TaskImportFailure.SheetNotFound => Results.BadRequest(new ApiErrorResponse(
+            "import_sheet_not_found",
+            "The selected sheet was not found in this workbook.")),
+        TaskImportFailure.InvalidMapping => Results.BadRequest(new ApiErrorResponse(
+            "invalid_import_mapping",
+            detail ?? "The column mapping is invalid.")),
+        TaskImportFailure.BatchNotValidated => Conflict(
+            "import_not_validated",
+            "Preview and validate the import before confirming it."),
+        TaskImportFailure.BatchHasErrors => Conflict(
+            "import_has_errors",
+            detail ?? "Resolve every validation error before confirming the import."),
+        TaskImportFailure.ConfirmationConflict => Conflict(
+            "import_confirmation_conflict",
+            detail ?? "The import changed while it was being confirmed. Refresh and try again."),
+        TaskImportFailure.BatchNotFound => Results.NotFound(new ApiErrorResponse(
+            "import_batch_not_found",
+            "The import batch was not found in this project.")),
+        _ => Results.NotFound(new ApiErrorResponse(
+            "project_not_found",
+            "Project was not found.")),
+    };
+
     private static IResult Conflict(string code, string message) =>
         Results.Conflict(new ApiErrorResponse(code, message));
 
@@ -655,6 +815,20 @@ public static class TaskEndpoints
     public sealed record ChangeStatusRequest(string? Status, string? RowVersion);
 
     public sealed record ArchiveTaskRequest(string? RowVersion);
+
+    public sealed record PreviewTaskImportRequest(
+        string? SheetName,
+        TaskImportMappingRequest? Mapping);
+
+    public sealed record TaskImportMappingRequest(
+        int TaskCode,
+        int Title,
+        int? AssigneeEmail,
+        int Status,
+        int Priority,
+        int? DueDate,
+        int? EstimateHours,
+        int? DependsOn);
 
     private sealed record SaveTaskValidation(
         IResult? Result,

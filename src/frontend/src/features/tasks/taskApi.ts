@@ -16,6 +16,11 @@ import type {
   TaskReviewResult,
   UpdateTaskInput,
   WorkspaceMemberOption,
+  TaskImportMapping,
+  TaskImportConfirmation,
+  TaskImportHistoryItem,
+  TaskImportPreview,
+  TaskImportUpload,
 } from '@/features/tasks/types'
 
 export interface TaskSpreadsheetDownload {
@@ -167,6 +172,78 @@ function taskExportPath(
 }
 
 export const taskApi = {
+  async uploadImport(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    file: File,
+  ) {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetch(
+      `${projectPath(workspaceId, projectId)}/tasks/imports`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: form,
+      },
+    )
+    if (!response.ok) {
+      const body = (await response
+        .json()
+        .catch(() => null)) as TaskErrorBody | null
+      throw new TaskApiError(response.status, {
+        code: body?.code ?? 'import_upload_failed',
+        message: body?.message ?? 'Unable to upload the workbook.',
+        errors: body?.errors,
+      })
+    }
+    return (await response.json()) as TaskImportUpload
+  },
+
+  previewImport(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    batchId: string,
+    sheetName: string,
+    mapping: TaskImportMapping,
+  ) {
+    return request<TaskImportPreview>(
+      `${projectPath(workspaceId, projectId)}/tasks/imports/${batchId}/preview`,
+      accessToken,
+      { method: 'PUT', body: JSON.stringify({ sheetName, mapping }) },
+    )
+  },
+
+  confirmImport(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    batchId: string,
+  ) {
+    return request<TaskImportConfirmation>(
+      `${projectPath(workspaceId, projectId)}/tasks/imports/${batchId}/confirm`,
+      accessToken,
+      { method: 'POST' },
+    )
+  },
+
+  listImportHistory(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+  ) {
+    return request<TaskImportHistoryItem[]>(
+      `${projectPath(workspaceId, projectId)}/tasks/imports`,
+      accessToken,
+    )
+  },
+
   downloadTemplate(
     accessToken: string,
     workspaceId: string,

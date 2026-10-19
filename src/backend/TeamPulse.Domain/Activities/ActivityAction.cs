@@ -26,4 +26,5 @@ public enum ActivityAction
     ResourceCreated,
     ResourceUpdated,
     ResourceDeleted,
+    ImportConfirmed,
 }

@@ -187,3 +187,81 @@ export interface TaskErrorBody {
   message: string
   errors?: Record<string, string[]>
 }
+
+export interface ImportColumn {
+  number: number
+  name: string
+}
+
+export interface ImportSheet {
+  name: string
+  dataRowCount: number
+  columns: ImportColumn[]
+}
+
+export interface TaskImportUpload {
+  batchId: string
+  fileName: string
+  fileSizeBytes: number
+  sheets: ImportSheet[]
+}
+
+export interface TaskImportMapping {
+  taskCode: number
+  title: number
+  assigneeEmail: number | null
+  status: number
+  priority: number
+  dueDate: number | null
+  estimateHours: number | null
+  dependsOn: number | null
+}
+
+export interface TaskImportCellError {
+  rowNumber: number
+  column: string
+  reason: string
+  rawValue: string | null
+}
+
+export interface TaskImportPreviewRow {
+  rowNumber: number
+  taskCode: string | null
+  title: string | null
+  assigneeEmail: string | null
+  status: string | null
+  priority: string | null
+  dueDate: string | null
+  estimateHours: string | null
+  dependsOn: string | null
+  errors: TaskImportCellError[]
+}
+
+export interface TaskImportPreview {
+  batchId: string
+  status: 'Validated' | 'ValidationFailed'
+  totalRows: number
+  validRows: number
+  errorRows: number
+  rows: TaskImportPreviewRow[]
+}
+
+export interface TaskImportConfirmation {
+  batchId: string
+  status: 'Confirmed'
+  importedTaskCount: number
+  confirmedAtUtc: string
+  alreadyConfirmed: boolean
+}
+
+export interface TaskImportHistoryItem {
+  batchId: string
+  fileName: string
+  status: 'Uploaded' | 'Validated' | 'ValidationFailed' | 'Confirmed'
+  totalRows: number
+  validRows: number
+  errorRows: number
+  importedTaskCount: number
+  uploadedAtUtc: string
+  confirmedAtUtc: string | null
+}
