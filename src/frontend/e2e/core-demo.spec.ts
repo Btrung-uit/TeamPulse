@@ -227,5 +227,26 @@ test('leader import → member evidence → leader review → presentation', asy
       page.getByText('1 accepted evidence · 1 reviews'),
     ).toBeVisible()
     await expectAccessible(page, 'presentation mode')
+
+    const presentationHeading = page.getByRole('heading', {
+      name: 'TeamPulse Core Demo',
+    })
+    await expect(presentationHeading).toHaveCSS('color', 'rgb(247, 248, 251)')
+
+    const firstKpi = page.locator('.presentation-kpis article').first()
+    const numberBox = await firstKpi.locator('strong').boundingBox()
+    const labelBox = await firstKpi.locator('span').boundingBox()
+    expect(numberBox).not.toBeNull()
+    expect(labelBox).not.toBeNull()
+    expect(numberBox!.y + numberBox!.height).toBeLessThanOrEqual(labelBox!.y)
+
+    const toolbar = page.locator('.presentation-toolbar')
+    const toolbarTop = (await toolbar.boundingBox())?.y
+    await toolbar.getByRole('link', { name: 'Resources', exact: true }).click()
+    await expect(page.locator('#resources')).toBeInViewport()
+    const toolbarTopAfterScroll = (await toolbar.boundingBox())?.y
+    expect(
+      Math.abs((toolbarTopAfterScroll ?? 0) - (toolbarTop ?? 0)),
+    ).toBeLessThanOrEqual(1)
   })
 })

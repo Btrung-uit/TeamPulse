@@ -1,9 +1,16 @@
 .presentation-mode {
+  --presentation-text: #f7f8fb;
+  --presentation-text-muted: #c4cad4;
+  --presentation-text-subtle: #9ca6b5;
+  --presentation-accent: #9bb0ff;
+  height: 100dvh;
   min-height: 100dvh;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
   scroll-behavior: smooth;
   scroll-snap-type: y proximity;
-  color: #f7f7f4;
+  color: var(--presentation-text);
   background:
     radial-gradient(circle at 85% 10%, rgb(78 112 255 / 18%), transparent 30%),
     radial-gradient(circle at 10% 85%, rgb(31 192 145 / 12%), transparent 32%),
@@ -27,7 +34,7 @@
 
 .presentation-toolbar > a,
 .presentation-toolbar nav a {
-  color: rgb(255 255 255 / 72%);
+  color: var(--presentation-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 700;
   text-decoration: none;
@@ -91,10 +98,22 @@
   line-height: 0.92;
 }
 
+.presentation-hero h1,
+.presentation-section-heading h2,
+.presentation-phase strong,
+.presentation-hero__progress strong,
+.presentation-kpis strong,
+.presentation-status-list strong,
+.presentation-team-grid h3,
+.presentation-team-grid dd,
+.presentation-closing strong {
+  color: var(--presentation-text);
+}
+
 .presentation-outcome {
   max-width: 800px;
   margin: var(--space-7) 0;
-  color: rgb(255 255 255 / 70%);
+  color: var(--presentation-text-muted);
   font-size: clamp(1.1rem, 2vw, 1.6rem);
   line-height: 1.55;
 }
@@ -110,7 +129,7 @@
 
 .presentation-phase span,
 .presentation-resource small {
-  color: rgb(255 255 255 / 50%);
+  color: var(--presentation-text-subtle);
   font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
@@ -127,6 +146,7 @@
   width: clamp(220px, 24vw, 360px);
   aspect-ratio: 1;
   border-radius: 50%;
+  gap: var(--space-2);
   place-content: center;
   text-align: center;
   background:
@@ -139,14 +159,21 @@
 }
 
 .presentation-hero__progress strong {
+  display: block;
   font-size: clamp(3rem, 6vw, 5.6rem);
   letter-spacing: -0.06em;
+  line-height: 1;
 }
 
 .presentation-hero__progress span,
 .presentation-hero__progress p,
 .presentation-section-heading > p {
-  color: rgb(255 255 255 / 52%);
+  color: var(--presentation-text-subtle);
+}
+
+.presentation-hero__progress span {
+  display: block;
+  line-height: 1.35;
 }
 
 .presentation-hero__progress p {
@@ -182,9 +209,11 @@
 
 .presentation-kpis article {
   position: relative;
-  display: grid;
+  display: flex;
   min-height: 180px;
-  align-content: end;
+  flex-direction: column;
+  gap: var(--space-2);
+  justify-content: flex-end;
   padding: var(--space-5);
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 11%);
@@ -210,12 +239,16 @@
 }
 
 .presentation-kpis strong {
+  display: block;
   font-size: clamp(2.5rem, 5vw, 4.5rem);
   letter-spacing: -0.05em;
+  line-height: 0.95;
 }
 
 .presentation-kpis span {
-  color: rgb(255 255 255 / 58%);
+  display: block;
+  color: var(--presentation-text-muted);
+  line-height: 1.35;
 }
 
 .presentation-status-list {
@@ -231,7 +264,7 @@
 }
 
 .presentation-status-list span {
-  color: rgb(255 255 255 / 66%);
+  color: var(--presentation-text-muted);
   font-size: var(--font-size-sm);
 }
 
@@ -295,7 +328,7 @@
 
 .presentation-team-grid p {
   margin-top: 3px;
-  color: rgb(255 255 255 / 46%);
+  color: var(--presentation-text-subtle);
   font-size: var(--font-size-xs);
 }
 
@@ -316,7 +349,7 @@
 }
 
 .presentation-team-grid dt {
-  color: rgb(255 255 255 / 45%);
+  color: var(--presentation-text-subtle);
   font-size: var(--font-size-xs);
 }
 
@@ -329,7 +362,7 @@
 .presentation-footnote,
 .presentation-empty {
   margin: 0;
-  color: rgb(255 255 255 / 50%);
+  color: var(--presentation-text-subtle);
 }
 
 .presentation-footnote {
@@ -418,7 +451,7 @@
 .presentation-closing p {
   flex-basis: 100%;
   margin: 0;
-  color: rgb(255 255 255 / 48%);
+  color: var(--presentation-text-subtle);
 }
 
 .presentation-slide-number {
@@ -471,9 +504,17 @@
 
 @media (max-width: 900px) {
   .presentation-toolbar {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--space-3);
   }
   .presentation-toolbar nav {
+    min-width: 0;
+    justify-content: center;
+    gap: var(--space-3);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .presentation-toolbar nav::-webkit-scrollbar {
     display: none;
   }
   .presentation-hero {
@@ -490,7 +531,11 @@
 
 @media (max-width: 600px) {
   .presentation-toolbar {
-    padding: 0 var(--space-3);
+    min-height: 96px;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 48px 40px;
+    gap: 0 var(--space-3);
+    padding: 0 var(--space-3) var(--space-2);
   }
   .presentation-toolbar > a {
     font-size: 0;
@@ -499,9 +544,24 @@
     width: 22px;
     height: 22px;
   }
+  .presentation-toolbar nav {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+  .presentation-toolbar nav a {
+    flex: 0 0 auto;
+    font-size: var(--font-size-xs);
+  }
+  .presentation-toolbar .ui-button {
+    grid-row: 1;
+    grid-column: 2;
+  }
   .presentation-scene {
     min-height: auto;
     padding: 72px var(--space-5);
+    scroll-margin-top: 96px;
     scroll-snap-align: none;
   }
   .presentation-hero h1 {
