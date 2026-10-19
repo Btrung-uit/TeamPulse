@@ -22,26 +22,65 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  database-init:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+  migrate:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: migration
     environment:
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Copy .env.example to .env and set MSSQL_SA_PASSWORD}
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__TeamPulse: Server=sqlserver,1433;Database=TeamPulse;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Copy .env.example to .env and set MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True
+      Authentication__Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set a random JWT_SIGNING_KEY in .env}
     depends_on:
       sqlserver:
         condition: service_healthy
-    volumes:
-      - ./database/init:/scripts:ro
-    entrypoint: ["/bin/bash", "-c"]
-    command:
-      - >-
-        /opt/mssql-tools18/bin/sqlcmd
-        -S sqlserver
-        -U sa
-        -P "$${MSSQL_SA_PASSWORD}"
-        -C
-        -b
-        -i /scripts/001-create-database.sql
     restart: "no"
+
+  api:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      ConnectionStrings__TeamPulse: Server=sqlserver,1433;Database=TeamPulse;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Copy .env.example to .env and set MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True
+      Authentication__Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set a random JWT_SIGNING_KEY in .env}
+      RateLimiting__Auth__PermitLimit: ${AUTH_RATE_LIMIT:-30}
+      RateLimiting__Import__PermitLimit: ${IMPORT_RATE_LIMIT:-10}
+      RateLimiting__WindowSeconds: ${RATE_LIMIT_WINDOW_SECONDS:-60}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  frontend:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/frontend/Dockerfile
+    ports:
+      - "${APP_HOST:-0.0.0.0}:${APP_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
 
 volumes:
   teampulse-sqlserver-data:

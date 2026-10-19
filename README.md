@@ -34,18 +34,18 @@ Task → Evidence → Review → Contribution Report → Presentation
 
 ## Tính năng chính
 
-| Nhóm | Khả năng |
-|---|---|
-| Workspace & Project | Tạo nhóm, project, thành viên và quyền truy cập theo workspace |
-| Work Management | Sprint, task, deadline, priority, dependency, Kanban và activity log |
-| Dashboard | Tiến độ, workload, task trễ hạn/blocked và hoạt động gần đây |
-| Evidence | Liên kết commit, pull request, issue, tài liệu, thiết kế và demo với task |
-| Excel Onboarding | Upload → map cột → validate/preview → xác nhận import; export báo cáo `.xlsx` |
-| Resources | Quản lý metadata/link của Google Docs, Drive, Canva, GitHub và bản demo |
-| Presentation Mode | Tóm tắt tiến độ, thành viên, contribution, tài nguyên và demo cho giảng viên |
+| Nhóm                 | Khả năng                                                                        |
+| -------------------- | ------------------------------------------------------------------------------- |
+| Workspace & Project  | Tạo nhóm, project, thành viên và quyền truy cập theo workspace                  |
+| Work Management      | Sprint, task, deadline, priority, dependency, Kanban và activity log            |
+| Dashboard            | Tiến độ, workload, task trễ hạn/blocked và hoạt động gần đây                    |
+| Evidence             | Liên kết commit, pull request, issue, tài liệu, thiết kế và demo với task       |
+| Excel Onboarding     | Upload → map cột → validate/preview → xác nhận import; export báo cáo `.xlsx`   |
+| Resources            | Quản lý metadata/link của Google Docs, Drive, Canva, GitHub và bản demo         |
+| Presentation Mode    | Tóm tắt tiến độ, thành viên, contribution, tài nguyên và demo cho giảng viên    |
 | GitHub Collaboration | PR Waiting Room, webhook, tự gắn evidence và chuyển trạng thái theo PR workflow |
-| Notifications | Task mới, deadline, comment, review request và trạng thái PR |
-| Mobile Monitoring | Theo dõi tiến độ, My Tasks, Inbox, PR và Resources với thao tác rủi ro thấp |
+| Notifications        | Task mới, deadline, comment, review request và trạng thái PR                    |
+| Mobile Monitoring    | Theo dõi tiến độ, My Tasks, Inbox, PR và Resources với thao tác rủi ro thấp     |
 
 ## Quy tắc workflow quan trọng
 
@@ -61,17 +61,17 @@ Todo → In Progress → Evidence Linked → In Review → Done
 
 ## Nền tảng kỹ thuật dự kiến
 
-| Phần | Công nghệ |
-|---|---|
-| Frontend | React, TypeScript |
-| Backend | ASP.NET Core Web API |
-| Persistence | SQL Server, Entity Framework Core |
-| Authentication | ASP.NET Core Identity, JWT |
-| Realtime | SignalR |
-| Excel | ClosedXML |
-| Integration | GitHub App, REST API, Webhooks |
-| Delivery | Docker Compose, GitHub Actions |
-| Architecture | Modular monolith trong monorepo |
+| Phần           | Công nghệ                         |
+| -------------- | --------------------------------- |
+| Frontend       | React, TypeScript                 |
+| Backend        | ASP.NET Core Web API              |
+| Persistence    | SQL Server, Entity Framework Core |
+| Authentication | ASP.NET Core Identity, JWT        |
+| Realtime       | SignalR                           |
+| Excel          | ClosedXML                         |
+| Integration    | GitHub App, REST API, Webhooks    |
+| Delivery       | Docker Compose, GitHub Actions    |
+| Architecture   | Modular monolith trong monorepo   |
 
 ## Kiến trúc cấp cao
 
@@ -162,7 +162,7 @@ Thiết lập SQL Server lần đầu:
 
 ```powershell
 Copy-Item .env.example .env
-# Đổi MSSQL_SA_PASSWORD trong .env trước khi sử dụng lâu dài.
+# Đổi cả hai placeholder MSSQL_SA_PASSWORD và JWT_SIGNING_KEY.
 docker compose up -d
 
 # Dùng cùng password vừa đặt trong .env; secret được lưu ngoài repository.
@@ -183,7 +183,7 @@ dotnet tool run dotnet-ef database update `
   --startup-project src/backend/TeamPulse.Api
 ```
 
-Những lần sau, một lệnh `docker compose up -d` sẽ khởi động SQL Server và bảo đảm database `TeamPulse` tồn tại.
+Những lần sau, `docker compose up -d` chỉ khởi động SQL Server cho workflow phát triển; lệnh EF ở trên tạo/cập nhật database.
 
 ```powershell
 # Backend: restore, build và test
@@ -210,13 +210,40 @@ Các health endpoint:
 
 Kiểm tra production build của frontend bằng `npm run build`. Dừng hạ tầng local bằng `docker compose down`; named volume giữ lại dữ liệu giữa các lần chạy.
 
+### E2E core demo flow
+
+Playwright tự khởi động frontend và một API riêng dùng database InMemory sạch, sau đó chạy luồng `Leader import → Member evidence → Leader review → Dashboard/Presentation`. Không cần Docker hay SQL Server cho smoke test này:
+
+```powershell
+cd src/frontend
+npm ci
+npx playwright install chromium # chỉ cần ở lần đầu
+npm run e2e
+```
+
+Khi thất bại, screenshot, video và trace nằm trong `src/frontend/test-results`; báo cáo HTML nằm trong `src/frontend/playwright-report`. API E2E chỉ dùng cấu hình InMemory do Playwright truyền vào và không thay đổi provider SQL Server mặc định của ứng dụng.
+
+### Chạy production-like bằng Docker
+
+Stack đầy đủ gồm SQL Server, EF migration bundle một lần, API và frontend Nginx reverse proxy:
+
+```powershell
+.\scripts\New-DeploymentEnv.ps1
+docker compose --profile app up --build -d
+docker compose --profile app ps -a
+```
+
+Mở `http://localhost:8080`; readiness công khai tại `http://localhost:8080/health/ready`. Hướng dẫn cấu hình production, deploy từ `main`, kiểm tra mobile, backup và rollback nằm trong [`docs/deployment/production-like.md`](docs/deployment/production-like.md).
+
 ## Continuous Integration
 
-Workflow `CI` chạy trên mọi pull request vào `main`, mọi push lên `main` và khi kích hoạt thủ công. Ba check ổn định là:
+Workflow `CI` chạy trên mọi pull request vào `main`, mọi push lên `main` và khi kích hoạt thủ công. Bốn check ổn định là:
 
 - `Backend`: restore, kiểm tra format, build Release và chạy test .NET.
 - `Frontend`: `npm ci`, lint, kiểm tra format, component tests và production build.
-- `CI Gate`: chỉ thành công khi cả hai job trên đều thành công.
+- `E2E Smoke`: khởi động clean InMemory API, chạy core demo flow bằng Chromium và tải failure evidence lên artifact.
+- `Docker production build`: xác thực Compose và build frontend, API, migration images.
+- `CI Gate`: chỉ thành công khi bốn job trên đều thành công.
 
 Workflow chỉ có quyền đọc source code và không sử dụng application secret. Khi repository có collaborator, hãy đặt `CI Gate` làm required status check của `main`.
 
@@ -280,7 +307,7 @@ Set up SQL Server for the first time:
 
 ```powershell
 Copy-Item .env.example .env
-# Change MSSQL_SA_PASSWORD in .env before long-term use.
+# Replace both MSSQL_SA_PASSWORD and JWT_SIGNING_KEY placeholders.
 docker compose up -d
 
 # Use the same password configured in .env; the secret is stored outside the repository.
@@ -301,7 +328,7 @@ dotnet tool run dotnet-ef database update `
   --startup-project src/backend/TeamPulse.Api
 ```
 
-On subsequent runs, the single command `docker compose up -d` starts SQL Server and ensures that the `TeamPulse` database exists.
+On subsequent runs, `docker compose up -d` starts SQL Server for the development workflow; the EF command above creates or updates the database.
 
 ```powershell
 # Backend: restore, build, and test
@@ -328,13 +355,27 @@ Health endpoints:
 
 Verify the frontend production build with `npm run build`. Stop local infrastructure with `docker compose down`; the named volume preserves data between runs.
 
+### Production-like Docker stack
+
+Run SQL Server, a one-shot EF migration bundle, the API, and the Nginx-hosted frontend with:
+
+```powershell
+.\scripts\New-DeploymentEnv.ps1
+docker compose --profile app up --build -d
+docker compose --profile app ps -a
+```
+
+Open `http://localhost:8080`; public readiness is available at `http://localhost:8080/health/ready`. See [`docs/deployment/production-like.md`](docs/deployment/production-like.md) for production configuration, deployment from `main`, mobile verification, backup, and rollback.
+
 ## Continuous Integration
 
-The `CI` workflow runs for every pull request targeting `main`, every push to `main`, and manual dispatches. Its three stable checks are:
+The `CI` workflow runs for every pull request targeting `main`, every push to `main`, and manual dispatches. Its four required checks are:
 
 - `Backend`: restore, formatting verification, Release build, and .NET tests.
 - `Frontend`: `npm ci`, lint, formatting verification, component tests, and production build.
-- `CI Gate`: succeeds only when both jobs above succeed.
+- `E2E Smoke`: starts a clean InMemory API and runs the Chromium core demo flow.
+- `Docker production build`: validates Compose and builds the frontend, API, and migration images.
+- `CI Gate`: succeeds only when all four jobs above succeed.
 
 The workflow has read-only source access and does not consume application secrets. Once the repository has collaborators, configure `CI Gate` as a required status check for `main`.
 
