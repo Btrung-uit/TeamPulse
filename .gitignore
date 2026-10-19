@@ -26,6 +26,7 @@ Thumbs.db
 # Test and runtime artifacts
 TestResults/
 playwright-report/
+test-results/
 uploads/
 *.log
 database/seed/*-preview.png
