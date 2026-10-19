@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import {
-  ArrowDownAZ,
   CalendarClock,
   Download,
   FileSpreadsheet,
@@ -8,6 +7,7 @@ import {
   ListFilter,
   Plus,
   Search,
+  RefreshCw,
   Upload,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -350,8 +350,8 @@ export function TaskBoardPage() {
           {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} shown
         </span>
         <span>
-          <ArrowDownAZ aria-hidden="true" size={15} />
-          Filters stay in this project URL
+          <RefreshCw aria-hidden="true" size={15} />
+          Auto-updates every 5 seconds
         </span>
       </div>
 

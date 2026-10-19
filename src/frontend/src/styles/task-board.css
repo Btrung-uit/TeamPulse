@@ -159,6 +159,9 @@
 
 .task-column__cards {
   display: grid;
+  min-height: 0;
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: var(--space-3);
   padding: 1px;
   overflow-y: auto;

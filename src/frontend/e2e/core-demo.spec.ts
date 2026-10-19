@@ -2,6 +2,7 @@ import {
   expect,
   test,
   type APIRequestContext,
+  type BrowserContext,
   type Locator,
   type Page,
 } from '@playwright/test'
@@ -86,11 +87,14 @@ async function signIn(page: Page, email: string) {
 }
 
 test('leader import → member evidence → leader review → presentation', async ({
+  browser,
   page,
   request,
 }, testInfo) => {
   const { leaderEmail, memberEmail } = await seedTeam(request)
   const workbookPath = testInfo.outputPath('core-demo-tasks.xlsx')
+  let leaderObserverContext: BrowserContext | undefined
+  let leaderObserverPage: Page | undefined
 
   await test.step('Leader signs in and creates a project', async () => {
     await signIn(page, leaderEmail)
@@ -133,6 +137,26 @@ test('leader import → member evidence → leader review → presentation', asy
     await expect(page.getByText('2 tasks imported.')).toBeVisible()
   })
 
+  await test.step('Leader keeps a second session open for live updates', async () => {
+    leaderObserverContext = await browser.newContext()
+    leaderObserverPage = await leaderObserverContext.newPage()
+    await signIn(leaderObserverPage, leaderEmail)
+    await activate(
+      leaderObserverPage.getByRole('link', { name: 'TeamPulse Core Demo' }),
+    )
+    await activate(
+      leaderObserverPage.getByRole('link', {
+        name: 'Task board',
+        exact: true,
+      }),
+    )
+    await expect(
+      leaderObserverPage.getByRole('button', {
+        name: 'Open TP-001: Build login page',
+      }),
+    ).toBeVisible()
+  })
+
   await test.step('Member links evidence and submits the task for review', async () => {
     await activate(page.getByRole('button', { name: /Sign out/ }))
     await signIn(page, memberEmail)
@@ -164,6 +188,14 @@ test('leader import → member evidence → leader review → presentation', asy
       page.locator('.task-detail-panel .ui-status-badge'),
     ).toHaveText('In review')
     await activate(page.getByRole('button', { name: 'Close task detail' }))
+
+    const observedTask = leaderObserverPage!
+      .getByRole('button', { name: 'Open TP-001: Build login page' })
+      .locator('..')
+    await expect(observedTask.getByText('In review')).toBeVisible({
+      timeout: 12_000,
+    })
+    await leaderObserverContext!.close()
   })
 
   await test.step('Leader accepts the task', async () => {

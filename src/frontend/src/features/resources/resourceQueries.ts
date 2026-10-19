@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { sharedQueryOptions } from '@/app/providers/sharedQueryOptions'
 import { useAuth } from '@/features/auth/useAuth'
 import { resourceApi } from '@/features/resources/resourceApi'
 import type {
@@ -25,6 +26,7 @@ export function useResources(
     queryFn: () =>
       resourceApi.list(accessToken!, workspaceId, projectId, filters),
     enabled: Boolean(accessToken && workspaceId && projectId),
+    ...sharedQueryOptions,
   })
 }
 

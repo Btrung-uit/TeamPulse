@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { sharedQueryOptions } from '@/app/providers/sharedQueryOptions'
+import { dashboardKeys } from '@/features/dashboard/dashboardQueries'
 import { useAuth } from '@/features/auth/useAuth'
 import { taskApi } from '@/features/tasks/taskApi'
 import type {
@@ -42,6 +44,7 @@ export function useTaskDetails(
     queryKey: taskKeys.detail(workspaceId, projectId, taskId ?? ''),
     queryFn: () => taskApi.get(accessToken!, workspaceId, projectId, taskId!),
     enabled: Boolean(accessToken && workspaceId && projectId && taskId),
+    ...sharedQueryOptions,
   })
 }
 
@@ -57,6 +60,7 @@ export function useTaskCollaboration(
     queryFn: () =>
       taskApi.getCollaboration(accessToken!, workspaceId, projectId, taskId!),
     enabled: Boolean(accessToken && workspaceId && projectId && taskId),
+    ...sharedQueryOptions,
   })
 }
 
@@ -73,6 +77,7 @@ export function useTasks(
     queryFn: () =>
       taskApi.listAll(accessToken!, workspaceId, projectId, filters),
     enabled: Boolean(enabled && accessToken && workspaceId && projectId),
+    ...sharedQueryOptions,
   })
 }
 
@@ -105,9 +110,14 @@ export function useCreateTask(workspaceId: string, projectId: string) {
     mutationFn: (input: CreateTaskInput) =>
       taskApi.create(accessToken!, workspaceId, projectId, input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: taskKeys.project(workspaceId, projectId),
-      })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: taskKeys.project(workspaceId, projectId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.project(workspaceId, projectId),
+        }),
+      ])
     },
   })
 }
@@ -120,9 +130,14 @@ function useTaskMutationSuccess(workspaceId: string, projectId: string) {
       taskKeys.detail(workspaceId, projectId, task.id),
       task,
     )
-    await queryClient.invalidateQueries({
-      queryKey: taskKeys.project(workspaceId, projectId),
-    })
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: taskKeys.project(workspaceId, projectId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.project(workspaceId, projectId),
+      }),
+    ])
   }
 }
 
@@ -189,6 +204,9 @@ function useCollaborationMutationSuccess(
       queryClient.invalidateQueries({
         queryKey: taskKeys.project(workspaceId, projectId),
       }),
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.project(workspaceId, projectId),
+      }),
     ])
   }
 }
@@ -243,6 +261,7 @@ export function useTaskDependencies(
     queryFn: () =>
       taskApi.listDependencies(accessToken!, workspaceId, projectId),
     enabled: Boolean(enabled && accessToken && workspaceId && projectId),
+    ...sharedQueryOptions,
   })
 }
 

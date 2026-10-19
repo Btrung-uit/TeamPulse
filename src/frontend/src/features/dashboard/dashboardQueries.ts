@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
+import { sharedQueryOptions } from '@/app/providers/sharedQueryOptions'
 import { getDashboard } from '@/features/dashboard/dashboardApi'
 import { useAuth } from '@/features/auth/useAuth'
 
@@ -15,5 +16,6 @@ export function useDashboard(workspaceId: string, projectId: string) {
     queryKey: dashboardKeys.project(workspaceId, projectId),
     queryFn: () => getDashboard(accessToken!, workspaceId, projectId),
     enabled: Boolean(accessToken && workspaceId && projectId),
+    ...sharedQueryOptions,
   })
 }
