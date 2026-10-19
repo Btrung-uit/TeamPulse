@@ -1,5 +1,7 @@
 import type {
+  AddWorkspaceMemberInput,
   WorkspaceErrorBody,
+  WorkspaceMember,
   WorkspaceSummary,
 } from '@/features/workspaces/types'
 
@@ -63,5 +65,27 @@ export const workspaceApi = {
       method: 'POST',
       body: JSON.stringify({ name }),
     })
+  },
+
+  listMembers(accessToken: string, workspaceId: string) {
+    return request<WorkspaceMember[]>(
+      `/api/workspaces/${workspaceId}/members`,
+      accessToken,
+    )
+  },
+
+  addMember(
+    accessToken: string,
+    workspaceId: string,
+    input: AddWorkspaceMemberInput,
+  ) {
+    return request<WorkspaceMember>(
+      `/api/workspaces/${workspaceId}/members`,
+      accessToken,
+      {
+        method: 'POST',
+        body: JSON.stringify(input),
+      },
+    )
   },
 }

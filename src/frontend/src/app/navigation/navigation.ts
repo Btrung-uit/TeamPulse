@@ -8,6 +8,7 @@ import {
   MoreHorizontal,
   Palette,
   Presentation,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -40,6 +41,11 @@ export function desktopNavigation(
           to: `/workspaces/${workspaceId}/projects`,
           icon: LayoutDashboard,
           end: true,
+        },
+        {
+          label: 'Members',
+          to: `/workspaces/${workspaceId}/members`,
+          icon: Users,
         },
         ...(projectBase
           ? [

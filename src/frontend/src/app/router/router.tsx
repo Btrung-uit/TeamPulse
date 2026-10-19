@@ -4,6 +4,7 @@ import { RouteErrorBoundary } from '@/app/errors/RouteErrorBoundary'
 import { AppShell } from '@/app/layouts/AppShell'
 import { ComponentShowcaseRoute } from '@/app/router/ComponentShowcaseRoute'
 import { DashboardRoute } from '@/app/router/DashboardRoute'
+import { PresentationRoute } from '@/app/router/PresentationRoute'
 import { ProtectedRoute, PublicOnlyRoute } from '@/features/auth/ProtectedRoute'
 import { AuthPage } from '@/features/auth/pages/AuthPage'
 import { ProjectListPage } from '@/features/projects/pages/ProjectListPage'
@@ -17,7 +18,9 @@ import { MobileMorePage } from '@/features/shell/pages/MobileMorePage'
 import { PlaceholderPage } from '@/features/shell/pages/PlaceholderPage'
 import { TaskBoardPage } from '@/features/tasks/pages/TaskBoardPage'
 import { MyTasksPage } from '@/features/tasks/pages/MyTasksPage'
+import { TaskImportPage } from '@/features/tasks/pages/TaskImportPage'
 import { WorkspaceOnboardingPage } from '@/features/workspaces/pages/WorkspaceOnboardingPage'
+import { WorkspaceMembersPage } from '@/features/workspaces/pages/WorkspaceMembersPage'
 import {
   WorkspaceOnboardingRoute,
   WorkspaceHomeRedirect,
@@ -68,6 +71,11 @@ export const router = createBrowserRouter([
                 element: <ProjectProviderRoute />,
                 children: [
                   {
+                    path: 'projects/:projectId/presentation',
+                    element: <ProjectRequiredRoute />,
+                    children: [{ index: true, element: <PresentationRoute /> }],
+                  },
+                  {
                     element: <AppShell />,
                     children: [
                       {
@@ -75,6 +83,7 @@ export const router = createBrowserRouter([
                         element: <Navigate to="projects" replace />,
                       },
                       { path: 'projects', element: <ProjectListPage /> },
+                      { path: 'members', element: <WorkspaceMembersPage /> },
                       {
                         path: 'projects/:projectId',
                         element: <ProjectRequiredRoute />,
@@ -86,13 +95,7 @@ export const router = createBrowserRouter([
                           },
                           {
                             path: 'import',
-                            element: (
-                              <PlaceholderPage
-                                eyebrow="Excel onboarding"
-                                title="Import tasks"
-                                description="Upload, column mapping and validation preview will be delivered in the Excel import milestone."
-                              />
-                            ),
+                            element: <TaskImportPage />,
                           },
                           {
                             path: 'my-tasks',
@@ -111,16 +114,6 @@ export const router = createBrowserRouter([
                           {
                             path: 'resources',
                             element: <ResourceHubPage />,
-                          },
-                          {
-                            path: 'presentation',
-                            element: (
-                              <PlaceholderPage
-                                eyebrow="Presentation"
-                                title="Presentation mode"
-                                description="A clean, read-only story of progress and contribution will be built in a later milestone."
-                              />
-                            ),
                           },
                           {
                             path: 'inbox',
