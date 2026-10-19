@@ -12,6 +12,7 @@ import {
   StatusBadge,
   type TaskStatus,
 } from '@/components/ui/StatusBadge/StatusBadge'
+import { SystemState } from '@/components/ui/SystemState/SystemState'
 import { Table, type TableColumn } from '@/components/ui/Table/Table'
 import { TaskCard } from '@/components/ui/TaskCard/TaskCard'
 import { ToastProvider } from '@/components/ui/Toast/ToastProvider'
@@ -156,6 +157,24 @@ describe('component primitives', () => {
       screen.getByRole('heading', { name: 'No tasks found' }),
     ).toBeVisible()
     expect(screen.getAllByRole('button')).toHaveLength(2)
+  })
+
+  it('announces recoverable system errors and exposes retry actions', () => {
+    render(
+      <SystemState
+        eyebrow="Connection issue"
+        title="Tasks could not be loaded"
+        description="Your filters are safe."
+        primaryAction={<Button>Try again</Button>}
+      />,
+    )
+
+    const state = screen.getByRole('alert')
+    expect(state).toHaveAccessibleName('Tasks could not be loaded')
+    expect(state).toHaveAccessibleDescription('Your filters are safe.')
+    expect(
+      within(state).getByRole('button', { name: 'Try again' }),
+    ).toBeVisible()
   })
 
   it('separates the task menu action from the card action', async () => {

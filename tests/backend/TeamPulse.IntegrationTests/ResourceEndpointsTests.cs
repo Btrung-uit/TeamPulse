@@ -23,9 +23,11 @@ public sealed class ResourceEndpointsTests : IClassFixture<TeamPulseApiFactory>
     {
         using var leader = await RegisterAsync("Resource Leader");
         using var member = await RegisterAsync("Resource Member");
+        using var advisor = await RegisterAsync("Resource Advisor");
         using var outsider = await RegisterAsync("Resource Outsider");
         var workspaceId = await CreateWorkspaceAsync(leader.Client, "Resource Workspace");
         await AddMemberAsync(leader.Client, workspaceId, member.Email, "Member");
+        await AddMemberAsync(leader.Client, workspaceId, advisor.Email, "Advisor");
         var projectId = await CreateProjectAsync(leader.Client, workspaceId, "Resource Project");
         var taskId = await CreateTaskAsync(leader.Client, workspaceId, projectId, member.UserId);
         var resourcesUrl = ResourcesUrl(workspaceId, projectId);
@@ -60,6 +62,16 @@ public sealed class ResourceEndpointsTests : IClassFixture<TeamPulseApiFactory>
         Assert.Equal("GoogleDocs", resource.Type);
         Assert.Equal(member.UserId, resource.Owner.UserId);
         Assert.Equal(taskId, resource.LinkedTask?.Id);
+
+        var advisorResources = await advisor.Client.GetAsync(resourcesUrl);
+        var advisorDashboard = await advisor.Client.GetAsync(
+            $"/api/workspaces/{workspaceId}/projects/{projectId}/dashboard");
+        var advisorMutation = await advisor.Client.PostAsJsonAsync(
+            resourcesUrl,
+            SaveResource("Advisor write", "Demo", "https://example.com/demo", member.UserId));
+        Assert.Equal(HttpStatusCode.OK, advisorResources.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, advisorDashboard.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, advisorMutation.StatusCode);
 
         var memberList = await member.Client.GetFromJsonAsync<List<ResourceResponse>>(
             $"{resourcesUrl}?search=architecture&type=GoogleDocs");

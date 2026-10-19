@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type PropsWithChildren } from 'react'
 
+import { SystemState } from '@/components/ui/SystemState/SystemState'
+
 interface GlobalErrorBoundaryState {
   hasError: boolean
 }
@@ -21,16 +23,18 @@ export class GlobalErrorBoundary extends Component<
   public render() {
     if (this.state.hasError) {
       return (
-        <main className="system-state system-state--fullscreen">
-          <div className="system-state__mark" aria-hidden="true">
-            !
-          </div>
-          <p className="eyebrow">Unexpected error</p>
-          <h1>TeamPulse could not continue.</h1>
-          <p>Reload the application. Your project data has not been changed.</p>
-          <button type="button" onClick={() => window.location.reload()}>
-            Reload application
-          </button>
+        <main>
+          <SystemState
+            fullScreen
+            eyebrow="Unexpected error"
+            title="TeamPulse could not continue."
+            description="Reload the application. Your project data has not been changed."
+            primaryAction={
+              <button type="button" onClick={() => window.location.reload()}>
+                Reload application
+              </button>
+            }
+          />
         </main>
       )
     }

@@ -16,7 +16,7 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar" aria-label="Primary navigation">
-      <NavLink className="brand" to="/" aria-label="TeamPulse dashboard">
+      <NavLink className="brand" to="/">
         <span className="brand__mark" aria-hidden="true">
           TP
         </span>

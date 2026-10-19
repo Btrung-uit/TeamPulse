@@ -138,6 +138,13 @@ export function TaskDetailPanel({
   const [evidenceNote, setEvidenceNote] = useState('')
   const [reviewComment, setReviewComment] = useState('')
   const [collaborationError, setCollaborationError] = useState<string>()
+  const [pendingDeadlineUpdate, setPendingDeadlineUpdate] =
+    useState<UpdateTaskInput>()
+  const [pendingDependencyRemoval, setPendingDependencyRemoval] = useState<{
+    predecessorTaskId: string
+    successorTaskId: string
+    label: string
+  }>()
 
   const task = details.data
   const canManage = managementMode && role === 'Leader' && !task?.isArchived
@@ -204,7 +211,14 @@ export function TaskDetailPanel({
     )
 
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !isArchiveOpen) onClose()
+      if (
+        event.key === 'Escape' &&
+        !isArchiveOpen &&
+        !pendingDeadlineUpdate &&
+        !pendingDependencyRemoval
+      ) {
+        onClose()
+      }
     }
 
     document.addEventListener('keydown', closeOnEscape)
@@ -214,7 +228,13 @@ export function TaskDetailPanel({
       document.body.style.overflow = previousOverflow
       previousFocus?.focus()
     }
-  }, [isArchiveOpen, onClose, taskId])
+  }, [
+    isArchiveOpen,
+    onClose,
+    pendingDeadlineUpdate,
+    pendingDependencyRemoval,
+    taskId,
+  ])
 
   if (!taskId) return null
 
@@ -304,21 +324,32 @@ export function TaskDetailPanel({
     setFormError(taskError(error, 'The task could not be changed. Try again.'))
   }
 
+  async function persistTaskUpdate(input: UpdateTaskInput) {
+    setFormError(undefined)
+    setConflict(undefined)
+    try {
+      const updated = await updateTask.mutateAsync(input)
+      setDraft(toDraft(updated))
+      setPendingDeadlineUpdate(undefined)
+      showToast({ title: 'Task updated', variant: 'success' })
+    } catch (error) {
+      setPendingDeadlineUpdate(undefined)
+      handleMutationError(error, { kind: 'update' })
+    }
+  }
+
   async function saveTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!task) return
     const input = buildUpdateInput(task.rowVersion)
     if (!input) return
 
-    setFormError(undefined)
-    setConflict(undefined)
-    try {
-      const updated = await updateTask.mutateAsync(input)
-      setDraft(toDraft(updated))
-      showToast({ title: 'Task updated', variant: 'success' })
-    } catch (error) {
-      handleMutationError(error, { kind: 'update' })
+    if ((input.dueOn ?? null) !== task.dueOn) {
+      setPendingDeadlineUpdate(input)
+      return
     }
+
+    await persistTaskUpdate(input)
   }
 
   async function changeTaskStatus(status: TaskStatus, rowVersion?: string) {
@@ -413,8 +444,10 @@ export function TaskDetailPanel({
     setFormError(undefined)
     try {
       await deleteDependency.mutateAsync({ predecessorTaskId, successorTaskId })
+      setPendingDependencyRemoval(undefined)
       showToast({ title: 'Dependency removed', variant: 'success' })
     } catch (error) {
+      setPendingDependencyRemoval(undefined)
       setFormError(taskError(error, 'The dependency could not be removed.'))
     }
   }
@@ -495,6 +528,16 @@ export function TaskDetailPanel({
         className="task-detail-panel"
         role="dialog"
         aria-modal="true"
+        aria-hidden={
+          isArchiveOpen || pendingDeadlineUpdate || pendingDependencyRemoval
+            ? true
+            : undefined
+        }
+        inert={
+          isArchiveOpen || pendingDeadlineUpdate || pendingDependencyRemoval
+            ? true
+            : undefined
+        }
         aria-label={task ? `${task.code} task details` : 'Task details'}
         aria-busy={details.isLoading || isMutating || undefined}
         onKeyDown={trapPanelFocus}
@@ -519,7 +562,12 @@ export function TaskDetailPanel({
         </header>
 
         {details.isLoading ? (
-          <div className="task-detail-state" aria-label="Loading task details">
+          <div
+            className="task-detail-state"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading task details"
+          >
             <span className="task-detail-skeleton" />
             <span className="task-detail-skeleton" />
             <span className="task-detail-skeleton" />
@@ -999,13 +1047,14 @@ export function TaskDetailPanel({
                                 aria-label={`Remove dependency on ${edge.predecessor.code}`}
                                 title="Remove dependency"
                                 onClick={() =>
-                                  void removeDependency(
-                                    edge.predecessor.id,
-                                    task.id,
-                                  )
+                                  setPendingDependencyRemoval({
+                                    predecessorTaskId: edge.predecessor.id,
+                                    successorTaskId: task.id,
+                                    label: edge.predecessor.code,
+                                  })
                                 }
                               >
-                                <Trash2 size={16} />
+                                <Trash2 aria-hidden="true" size={16} />
                               </Button>
                             )}
                           </div>
@@ -1033,13 +1082,14 @@ export function TaskDetailPanel({
                                 aria-label={`Remove dependency to ${edge.successor.code}`}
                                 title="Remove dependency"
                                 onClick={() =>
-                                  void removeDependency(
-                                    task.id,
-                                    edge.successor.id,
-                                  )
+                                  setPendingDependencyRemoval({
+                                    predecessorTaskId: task.id,
+                                    successorTaskId: edge.successor.id,
+                                    label: edge.successor.code,
+                                  })
                                 }
                               >
-                                <Trash2 size={16} />
+                                <Trash2 aria-hidden="true" size={16} />
                               </Button>
                             )}
                           </div>
@@ -1106,6 +1156,83 @@ export function TaskDetailPanel({
           </>
         )}
       </aside>
+
+      <Modal
+        isOpen={Boolean(pendingDependencyRemoval)}
+        onClose={() => setPendingDependencyRemoval(undefined)}
+        title="Remove this dependency?"
+        description="The tasks remain unchanged, but TeamPulse will stop reporting risks for this relationship."
+        size="sm"
+        isPending={deleteDependency.isPending}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              disabled={deleteDependency.isPending}
+              onClick={() => setPendingDependencyRemoval(undefined)}
+            >
+              Keep dependency
+            </Button>
+            <Button
+              variant="danger"
+              isLoading={deleteDependency.isPending}
+              loadingLabel="Removing dependency"
+              onClick={() => {
+                if (pendingDependencyRemoval) {
+                  void removeDependency(
+                    pendingDependencyRemoval.predecessorTaskId,
+                    pendingDependencyRemoval.successorTaskId,
+                  )
+                }
+              }}
+            >
+              Remove dependency
+            </Button>
+          </>
+        }
+      >
+        <p className="task-archive-confirm">
+          Relationship with <strong>{pendingDependencyRemoval?.label}</strong>{' '}
+          will be removed.
+        </p>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(pendingDeadlineUpdate)}
+        onClose={() => setPendingDeadlineUpdate(undefined)}
+        title="Confirm deadline change"
+        description="Deadline changes can affect dependent tasks. TeamPulse will record the change but will not move other deadlines automatically."
+        size="sm"
+        isPending={updateTask.isPending}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              disabled={updateTask.isPending}
+              onClick={() => setPendingDeadlineUpdate(undefined)}
+            >
+              Keep current deadline
+            </Button>
+            <Button
+              isLoading={updateTask.isPending}
+              loadingLabel="Updating deadline"
+              onClick={() => {
+                if (pendingDeadlineUpdate) {
+                  void persistTaskUpdate(pendingDeadlineUpdate)
+                }
+              }}
+            >
+              Update deadline
+            </Button>
+          </>
+        }
+      >
+        <p className="task-archive-confirm">
+          Current: <strong>{task?.dueOn ?? 'No deadline'}</strong>
+          <br />
+          New: <strong>{pendingDeadlineUpdate?.dueOn ?? 'No deadline'}</strong>
+        </p>
+      </Modal>
 
       <Modal
         isOpen={isArchiveOpen}

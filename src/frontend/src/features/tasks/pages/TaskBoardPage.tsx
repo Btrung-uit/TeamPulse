@@ -40,7 +40,12 @@ import { useToast } from '@/components/ui/Toast/useToast'
 
 function TaskBoardSkeleton() {
   return (
-    <div className="task-board task-board--loading" aria-label="Loading tasks">
+    <div
+      className="task-board task-board--loading"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading tasks"
+    >
       {taskColumns.slice(0, 4).map((column) => (
         <section className="task-column" key={column.status}>
           <div className="task-column__heading">

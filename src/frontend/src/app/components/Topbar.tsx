@@ -118,7 +118,7 @@ export function Topbar() {
       </div>
 
       <div className="topbar__actions">
-        <button className="search-trigger" type="button" aria-label="Search">
+        <button className="search-trigger" type="button">
           <Search aria-hidden="true" size={18} />
           <span>Search</span>
           <kbd>⌘ K</kbd>
@@ -149,7 +149,6 @@ export function Topbar() {
         <button
           className="user-menu"
           type="button"
-          aria-label="Sign out"
           title="Sign out"
           onClick={() => void logout()}
         >
@@ -158,7 +157,7 @@ export function Topbar() {
           </span>
           <span className="user-menu__copy">
             <strong>{user?.displayName ?? 'TeamPulse user'}</strong>
-            <small>{user?.email ?? 'Signed in'}</small>
+            <small>Sign out · {user?.email ?? 'Signed in'}</small>
           </span>
           <LogOut aria-hidden="true" size={16} />
         </button>

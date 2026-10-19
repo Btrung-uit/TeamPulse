@@ -3,6 +3,7 @@ import { Link, Navigate, Outlet, useParams } from 'react-router-dom'
 
 import { RouteLoading } from '@/app/components/RouteLoading'
 import { Button } from '@/components/ui/Button/Button'
+import { SystemState } from '@/components/ui/SystemState/SystemState'
 import { useWorkspace } from '@/features/workspaces/useWorkspace'
 
 export function WorkspaceRequiredRoute() {
@@ -14,11 +15,16 @@ export function WorkspaceRequiredRoute() {
 
   if (status === 'error') {
     return (
-      <main className="workspace-state" role="alert">
-        <p className="eyebrow">Connection issue</p>
-        <h1>We could not load your workspace.</h1>
-        <p>{error}</p>
-        <Button onClick={() => void reload()}>Try again</Button>
+      <main>
+        <SystemState
+          className="workspace-state"
+          eyebrow="Connection issue"
+          title="We could not load your workspace."
+          description={error ?? 'The workspace request failed.'}
+          primaryAction={
+            <Button onClick={() => void reload()}>Try again</Button>
+          }
+        />
       </main>
     )
   }
@@ -39,11 +45,16 @@ export function WorkspaceOnboardingRoute() {
 
   if (status === 'error') {
     return (
-      <main className="workspace-state" role="alert">
-        <p className="eyebrow">Connection issue</p>
-        <h1>Workspace setup is temporarily unavailable.</h1>
-        <p>{error}</p>
-        <Button onClick={() => void reload()}>Try again</Button>
+      <main>
+        <SystemState
+          className="workspace-state"
+          eyebrow="Connection issue"
+          title="Workspace setup is temporarily unavailable."
+          description={error ?? 'The workspace request failed.'}
+          primaryAction={
+            <Button onClick={() => void reload()}>Try again</Button>
+          }
+        />
       </main>
     )
   }
@@ -74,16 +85,19 @@ export function WorkspaceUrlRoute() {
 
   if (!requestedWorkspace) {
     return (
-      <main className="workspace-state" role="alert">
-        <p className="eyebrow">No permission</p>
-        <h1>This workspace is not available.</h1>
-        <p>
-          The link may be invalid, or your active membership does not grant
-          access to this workspace.
-        </p>
-        <Link className="system-state__action" to="/">
-          Go to my workspace
-        </Link>
+      <main>
+        <SystemState
+          className="workspace-state"
+          tone="permission"
+          eyebrow="No permission"
+          title="This workspace is not available."
+          description="The link may be invalid, or your active membership does not grant access to this workspace."
+          primaryAction={
+            <Link className="system-state__action" to="/">
+              Go to my workspace
+            </Link>
+          }
+        />
       </main>
     )
   }

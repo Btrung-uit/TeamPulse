@@ -1,5 +1,7 @@
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router-dom'
 
+import { SystemState } from '@/components/ui/SystemState/SystemState'
+
 export function RouteErrorBoundary() {
   const error = useRouteError()
   const title = isRouteErrorResponse(error)
@@ -7,16 +9,18 @@ export function RouteErrorBoundary() {
     : 'This page could not be loaded.'
 
   return (
-    <main className="system-state system-state--fullscreen">
-      <div className="system-state__mark" aria-hidden="true">
-        !
-      </div>
-      <p className="eyebrow">Route error</p>
-      <h1>{title}</h1>
-      <p>Return to the project overview and try the action again.</p>
-      <Link className="system-state__action" to="/">
-        Back to dashboard
-      </Link>
+    <main>
+      <SystemState
+        fullScreen
+        eyebrow="Route error"
+        title={title}
+        description="Return to the project overview and try the action again."
+        primaryAction={
+          <Link className="system-state__action" to="/">
+            Back to dashboard
+          </Link>
+        }
+      />
     </main>
   )
 }

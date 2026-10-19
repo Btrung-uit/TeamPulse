@@ -37,7 +37,12 @@ import { useWorkspace } from '@/features/workspaces/useWorkspace'
 
 function TaskListSkeleton() {
   return (
-    <div className="my-task-grid" aria-label="Loading your tasks">
+    <div
+      className="my-task-grid"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading your tasks"
+    >
       {Array.from({ length: 4 }, (_, index) => (
         <TaskCard
           key={index}

@@ -174,7 +174,12 @@ export function ProjectListPage() {
 
   if (status === 'idle' || status === 'loading') {
     return (
-      <div className="project-list-skeleton" aria-label="Loading projects" />
+      <div
+        className="project-list-skeleton"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading projects"
+      />
     )
   }
 

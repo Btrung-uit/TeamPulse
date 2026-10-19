@@ -613,6 +613,139 @@ describe('task board flow', () => {
     ).toBeInTheDocument()
   })
 
+  it('requires confirmation before changing a task deadline', async () => {
+    const putBodies: unknown[] = []
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const path = String(input)
+        const optionResponse = optionsResponse(path)
+        if (optionResponse) return optionResponse
+        if (path.endsWith('/dependencies')) return jsonResponse([])
+        if (path.endsWith('/tasks/task-1') && init?.method === 'PUT') {
+          const body = JSON.parse(String(init.body))
+          putBodies.push(body)
+          return jsonResponse({
+            ...taskDetails,
+            dueOn: body.dueOn,
+            rowVersion: 'version-2',
+          })
+        }
+        if (path.endsWith('/tasks/task-1')) return jsonResponse(taskDetails)
+        if (path.includes('/tasks?')) return jsonResponse(taskPage([task]))
+        throw new Error(`Unexpected request: ${path}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?task=task-1',
+    )
+    const detailsDialog = await screen.findByRole('dialog', {
+      name: 'TP-023 task details',
+    })
+    await user.clear(within(detailsDialog).getByLabelText('Deadline'))
+    await user.type(
+      within(detailsDialog).getByLabelText('Deadline'),
+      '2026-10-25',
+    )
+    await user.click(
+      within(detailsDialog).getByRole('button', { name: 'Save changes' }),
+    )
+
+    const confirmDialog = screen.getByRole('dialog', {
+      name: 'Confirm deadline change',
+    })
+    expect(putBodies).toHaveLength(0)
+    expect(within(confirmDialog).getByText('2026-10-20')).toBeVisible()
+    expect(within(confirmDialog).getByText('2026-10-25')).toBeVisible()
+    await user.click(
+      within(confirmDialog).getByRole('button', { name: 'Update deadline' }),
+    )
+
+    await waitFor(() =>
+      expect(putBodies).toEqual([
+        expect.objectContaining({
+          dueOn: '2026-10-25',
+          rowVersion: 'version-1',
+        }),
+      ]),
+    )
+  })
+
+  it('requires confirmation before removing a dependency', async () => {
+    let removed = false
+    const edge = {
+      predecessor: {
+        id: 'task-0',
+        code: 'TP-022',
+        title: 'Build task API',
+        status: 'Done',
+        dueOn: '2026-10-18',
+        isArchived: false,
+      },
+      successor: {
+        id: task.id,
+        code: task.code,
+        title: task.title,
+        status: task.status,
+        dueOn: task.dueOn,
+        isArchived: false,
+      },
+      isAtRisk: false,
+      risks: [],
+      createdAtUtc: '2026-10-17T00:00:00Z',
+    }
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const path = String(input)
+        const optionResponse = optionsResponse(path)
+        if (optionResponse) return optionResponse
+        if (
+          path.endsWith('/dependencies/task-0/task-1') &&
+          init?.method === 'DELETE'
+        ) {
+          removed = true
+          return new Response(null, { status: 204 })
+        }
+        if (path.endsWith('/dependencies')) {
+          return jsonResponse(removed ? [] : [edge])
+        }
+        if (path.endsWith('/tasks/task-1')) return jsonResponse(taskDetails)
+        if (path.includes('/tasks?')) return jsonResponse(taskPage([task]))
+        throw new Error(`Unexpected request: ${path}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?task=task-1',
+    )
+    const detailsDialog = await screen.findByRole('dialog', {
+      name: 'TP-023 task details',
+    })
+    await user.click(
+      await within(detailsDialog).findByRole('button', {
+        name: 'Remove dependency on TP-022',
+      }),
+    )
+
+    const confirmDialog = screen.getByRole('dialog', {
+      name: 'Remove this dependency?',
+    })
+    expect(removed).toBe(false)
+    await user.click(
+      within(confirmDialog).getByRole('button', {
+        name: 'Remove dependency',
+      }),
+    )
+    await waitFor(() => expect(removed).toBe(true))
+    expect(await screen.findByText('Dependency removed')).toBeVisible()
+  })
+
   it('keeps content read-only for a member while allowing an assignee status transition', async () => {
     const memberAuth: AuthContextValue = {
       ...authContext,

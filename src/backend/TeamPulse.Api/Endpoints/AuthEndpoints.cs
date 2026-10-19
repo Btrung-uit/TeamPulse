@@ -4,6 +4,7 @@ using System.Security.Claims;
 using TeamPulse.Api.Contracts;
 using TeamPulse.Application.Authentication;
 using TeamPulse.Domain.Users;
+using TeamPulse.Api.Security;
 
 namespace TeamPulse.Api.Endpoints;
 
@@ -16,9 +17,12 @@ public static class AuthEndpoints
     {
         var group = endpoints.MapGroup("/api/auth").WithTags("Authentication");
 
-        group.MapPost("/register", RegisterAsync);
-        group.MapPost("/login", LoginAsync);
-        group.MapPost("/refresh", RefreshAsync);
+        group.MapPost("/register", RegisterAsync)
+            .RequireRateLimiting(SecurityPolicies.AuthRateLimit);
+        group.MapPost("/login", LoginAsync)
+            .RequireRateLimiting(SecurityPolicies.AuthRateLimit);
+        group.MapPost("/refresh", RefreshAsync)
+            .RequireRateLimiting(SecurityPolicies.AuthRateLimit);
         group.MapPost("/logout", LogoutAsync);
         group.MapGet("/me", GetCurrentUserAsync).RequireAuthorization();
 
