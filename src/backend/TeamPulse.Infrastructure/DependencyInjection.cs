@@ -11,8 +11,10 @@ using Microsoft.IdentityModel.Tokens;
 using TeamPulse.Application.Authentication;
 using TeamPulse.Application.Common.Interfaces;
 using TeamPulse.Application.Dashboard;
+using TeamPulse.Application.Notifications;
 using TeamPulse.Application.Projects;
 using TeamPulse.Application.Resources;
+using TeamPulse.Application.Search;
 using TeamPulse.Application.Tasks;
 using TeamPulse.Application.Planning;
 using TeamPulse.Application.Workspaces;
@@ -21,10 +23,12 @@ using TeamPulse.Infrastructure.Authorization;
 using TeamPulse.Infrastructure.Dashboard;
 using TeamPulse.Infrastructure.Identity;
 using TeamPulse.Infrastructure.Multitenancy;
+using TeamPulse.Infrastructure.Notifications;
 using TeamPulse.Infrastructure.Persistence;
 using TeamPulse.Infrastructure.Planning;
 using TeamPulse.Infrastructure.Projects;
 using TeamPulse.Infrastructure.Resources;
+using TeamPulse.Infrastructure.Search;
 using TeamPulse.Infrastructure.Tasks;
 using TeamPulse.Infrastructure.Workspaces;
 
@@ -116,6 +120,8 @@ public static class DependencyInjection
         services.AddScoped<ITaskCollaborationService, TaskCollaborationService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IResourceService, ResourceService>();
+        services.AddScoped<IWorkspaceSearchService, WorkspaceSearchService>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         return services;
     }

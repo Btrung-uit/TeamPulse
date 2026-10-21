@@ -582,6 +582,11 @@ describe('task board flow', () => {
     const dialog = await screen.findByRole('dialog', {
       name: 'TP-023 task details',
     })
+    expect(
+      within(dialog).getByText(
+        'Discard restores the last saved values. Save applies your edits to this task.',
+      ),
+    ).toBeVisible()
     const title = within(dialog).getByLabelText('Title')
     await user.clear(title)
     await user.type(title, 'Updated by leader')

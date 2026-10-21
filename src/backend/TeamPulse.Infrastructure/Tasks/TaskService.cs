@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TeamPulse.Application.Tasks;
 using TeamPulse.Domain.Activities;
+using TeamPulse.Domain.Notifications;
 using TeamPulse.Domain.Projects;
 using TeamPulse.Domain.Tasks;
 using TeamPulse.Domain.Workspaces;
@@ -202,6 +203,15 @@ internal sealed class TaskService(
                 ActivityAction.TaskAssigned,
                 task.Id,
                 newValue: task.AssigneeUserId.Value.ToString());
+            AddNotification(
+                workspaceId,
+                actorUserId,
+                task.AssigneeUserId.Value,
+                NotificationKind.Assignment,
+                $"Assigned: {task.Code.Value}",
+                $"You were assigned to \"{task.Title}\".",
+                projectId,
+                task.Id);
         }
 
         if (task.DueOn.HasValue)
@@ -321,6 +331,18 @@ internal sealed class TaskService(
                 task.Id,
                 previousValue: previousAssignee?.ToString(),
                 newValue: task.AssigneeUserId?.ToString());
+            if (task.AssigneeUserId.HasValue)
+            {
+                AddNotification(
+                    workspaceId,
+                    actorUserId,
+                    task.AssigneeUserId.Value,
+                    NotificationKind.Assignment,
+                    $"Assigned: {task.Code.Value}",
+                    $"You were assigned to \"{task.Title}\".",
+                    projectId,
+                    task.Id);
+            }
         }
 
         if (previousDueOn != task.DueOn)
@@ -416,6 +438,53 @@ internal sealed class TaskService(
                 task.Id,
                 previousValue: previousStatus.ToString(),
                 newValue: task.Status.ToString());
+
+            if (task.Status == ProjectTaskStatus.InReview)
+            {
+                IReadOnlyList<Guid> recipients = task.ReviewerUserId.HasValue
+                    ? [task.ReviewerUserId.Value]
+                    : await dbContext.WorkspaceMembers
+                        .AsNoTracking()
+                        .Where(member =>
+                            member.WorkspaceId == workspaceId &&
+                            member.IsActive &&
+                            member.Role == WorkspaceRole.Leader)
+                        .Select(member => member.UserId)
+                        .ToListAsync(cancellationToken);
+
+                foreach (var recipientUserId in recipients)
+                {
+                    AddNotification(
+                        workspaceId,
+                        actorUserId,
+                        recipientUserId,
+                        NotificationKind.ReviewRequest,
+                        $"Review requested: {task.Code.Value}",
+                        $"\"{task.Title}\" is ready for review.",
+                        projectId,
+                        task.Id);
+                }
+            }
+            else if (task.AssigneeUserId.HasValue &&
+                     task.Status is ProjectTaskStatus.Done or ProjectTaskStatus.NeedsChanges)
+            {
+                var accepted = task.Status == ProjectTaskStatus.Done;
+                AddNotification(
+                    workspaceId,
+                    actorUserId,
+                    task.AssigneeUserId.Value,
+                    accepted
+                        ? NotificationKind.ReviewAccepted
+                        : NotificationKind.ChangesRequested,
+                    accepted
+                        ? $"Review accepted: {task.Code.Value}"
+                        : $"Changes requested: {task.Code.Value}",
+                    accepted
+                        ? $"\"{task.Title}\" was accepted."
+                        : $"\"{task.Title}\" needs more changes.",
+                    projectId,
+                    task.Id);
+            }
         }
 
         var saveFailure = await SaveWithConcurrencyAsync(cancellationToken);
@@ -754,5 +823,31 @@ internal sealed class TaskService(
             timeProvider.GetUtcNow(),
             previousValue: previousValue,
             newValue: newValue));
+    }
+
+    private void AddNotification(
+        Guid workspaceId,
+        Guid actorUserId,
+        Guid recipientUserId,
+        NotificationKind kind,
+        string title,
+        string message,
+        Guid projectId,
+        Guid taskId)
+    {
+        if (recipientUserId == actorUserId)
+        {
+            return;
+        }
+
+        dbContext.Notifications.Add(new Notification(
+            Guid.NewGuid(),
+            workspaceId,
+            recipientUserId,
+            kind,
+            title,
+            message,
+            projectId,
+            taskId));
     }
 }

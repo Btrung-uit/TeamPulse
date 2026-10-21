@@ -54,7 +54,7 @@ Các ảnh dưới đây được chụp từ scenario tái tạo `UIT Software 
 | Resources            | Quản lý metadata/link của Google Docs, Drive, Canva, GitHub và bản demo         |
 | Presentation Mode    | Tóm tắt tiến độ, thành viên, contribution, tài nguyên và demo cho giảng viên    |
 
-GitHub webhook/PR automation, realtime notification và mobile workflow đầy đủ thuộc Phase 2–3; MVP hiện chỉ lưu liên kết evidence/resource do người dùng cung cấp.
+GitHub webhook/PR automation, realtime notification và mobile workflow đầy đủ thuộc Phase 2–3. MVP có notification in-app cho assignment/review và vẫn chỉ lưu liên kết evidence/resource do người dùng cung cấp.
 
 ## Quy tắc workflow quan trọng
 
@@ -320,7 +320,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-MVP portfolio đã có auth, workspace membership, project/task/planning, transactional Excel onboarding, evidence/review, dashboard, Resource Hub, Presentation Mode, accessibility states, security hardening, E2E core flow và Docker production-like. GitHub automation, realtime notification và public cloud deployment chưa thuộc bản hiện tại.
+MVP portfolio đã có auth, multi-workspace switch/create, workspace-scoped search, in-app assignment/review notification, project/task/planning, transactional Excel onboarding, evidence/review, dashboard, Resource Hub, Presentation Mode, accessibility states, security hardening, E2E core flow và Docker production-like. GitHub automation, realtime delivery và public cloud deployment chưa thuộc bản hiện tại.
 
 ## Project Brain
 

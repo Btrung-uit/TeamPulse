@@ -302,10 +302,24 @@
 
 .task-detail-panel__footer {
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   border-top: 1px solid var(--color-border);
   border-bottom: 0;
   box-shadow: 0 -12px 30px rgb(0 0 0 / 5%);
+}
+
+.task-detail-panel__footer-help {
+  max-width: 25rem;
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-sm);
+}
+
+.task-detail-panel__footer-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-3);
 }
 
 .task-detail-state {
@@ -795,7 +809,16 @@
     grid-column: auto;
   }
 
-  .task-detail-panel__footer > .ui-button,
+  .task-detail-panel__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-detail-panel__footer-actions {
+    width: 100%;
+  }
+
+  .task-detail-panel__footer-actions > .ui-button,
   .task-detail-danger {
     flex: 1;
   }

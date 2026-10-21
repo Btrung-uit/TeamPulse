@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TeamPulse.Application.Tasks;
 using TeamPulse.Domain.Activities;
+using TeamPulse.Domain.Notifications;
 using TeamPulse.Domain.Tasks;
 using TeamPulse.Domain.Workspaces;
 using TeamPulse.Infrastructure.Persistence;
@@ -191,6 +192,26 @@ internal sealed class TaskCollaborationService(
             ProjectTaskStatus.InReview.ToString(),
             target.ToString());
         AddActivity(workspaceId, actorUserId, action, taskId);
+        if (task.Result.AssigneeUserId.HasValue &&
+            task.Result.AssigneeUserId.Value != actorUserId)
+        {
+            var accepted = command.Decision == TaskReviewDecision.Accept;
+            dbContext.Notifications.Add(new Notification(
+                Guid.NewGuid(),
+                workspaceId,
+                task.Result.AssigneeUserId.Value,
+                accepted
+                    ? NotificationKind.ReviewAccepted
+                    : NotificationKind.ChangesRequested,
+                accepted
+                    ? $"Review accepted: {task.Result.Code.Value}"
+                    : $"Changes requested: {task.Result.Code.Value}",
+                accepted
+                    ? $"\"{task.Result.Title}\" was accepted."
+                    : $"\"{task.Result.Title}\" needs more changes.",
+                projectId,
+                taskId));
+        }
 
         var failure = await SaveAsync(cancellationToken);
         if (failure != TaskFailure.None)

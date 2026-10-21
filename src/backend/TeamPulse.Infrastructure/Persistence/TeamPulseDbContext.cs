@@ -4,6 +4,7 @@ using TeamPulse.Application.Common.Interfaces;
 using TeamPulse.Domain.Activities;
 using TeamPulse.Domain.Common;
 using TeamPulse.Domain.Imports;
+using TeamPulse.Domain.Notifications;
 using TeamPulse.Domain.Projects;
 using TeamPulse.Domain.Resources;
 using TeamPulse.Domain.Tasks;
@@ -47,6 +48,8 @@ public sealed class TeamPulseDbContext(
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
 
     public DbSet<ImportErrorRow> ImportErrorRows => Set<ImportErrorRow>();
+
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
 
@@ -114,6 +117,11 @@ public sealed class TeamPulseDbContext(
             .HasQueryFilter(error =>
                 _workspaceScope.WorkspaceId.HasValue &&
                 error.ImportBatch.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<Notification>()
+            .HasQueryFilter(notification =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                notification.WorkspaceId == _workspaceScope.WorkspaceId.Value);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

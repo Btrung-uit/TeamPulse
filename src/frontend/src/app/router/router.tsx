@@ -16,6 +16,7 @@ import {
 import { NotFoundPage } from '@/features/shell/pages/NotFoundPage'
 import { MobileMorePage } from '@/features/shell/pages/MobileMorePage'
 import { PlaceholderPage } from '@/features/shell/pages/PlaceholderPage'
+import { NotificationsPage } from '@/features/shell/pages/NotificationsPage'
 import { TaskBoardPage } from '@/features/tasks/pages/TaskBoardPage'
 import { MyTasksPage } from '@/features/tasks/pages/MyTasksPage'
 import { TaskImportPage } from '@/features/tasks/pages/TaskImportPage'
@@ -117,13 +118,7 @@ export const router = createBrowserRouter([
                           },
                           {
                             path: 'inbox',
-                            element: (
-                              <PlaceholderPage
-                                eyebrow="Inbox"
-                                title="Notifications"
-                                description="Review requests, deadline risks and mentions will be collected here."
-                              />
-                            ),
+                            element: <NotificationsPage />,
                           },
                           {
                             path: 'more',

@@ -15,6 +15,8 @@ import { useTheme } from '@/app/providers/useTheme'
 import { useAuth } from '@/features/auth/useAuth'
 import { projectListPath, projectPath } from '@/features/projects/projectPaths'
 import { useProject } from '@/features/projects/useProject'
+import { NotificationPanel } from '@/features/shell/components/NotificationPanel'
+import { WorkspaceSearchDialog } from '@/features/shell/components/WorkspaceSearchDialog'
 import { useWorkspace } from '@/features/workspaces/useWorkspace'
 
 export function Topbar() {
@@ -23,7 +25,11 @@ export function Topbar() {
   const { currentWorkspace } = useWorkspace()
   const { projects, currentProject, status } = useProject()
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
   const projectMenuRef = useRef<HTMLDivElement>(null)
+  const notificationRef = useRef<HTMLDivElement>(null)
   const nextTheme = theme === 'dark' ? 'light' : 'dark'
   const initials = user?.displayName
     .split(/\s+/)
@@ -54,6 +60,41 @@ export function Topbar() {
       document.removeEventListener('keydown', closeOnEscape)
     }
   }, [isProjectMenuOpen])
+
+  useEffect(() => {
+    function openSearch(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setIsProjectMenuOpen(false)
+        setIsNotificationOpen(false)
+        setIsSearchOpen(true)
+      }
+    }
+
+    document.addEventListener('keydown', openSearch)
+    return () => document.removeEventListener('keydown', openSearch)
+  }, [])
+
+  useEffect(() => {
+    if (!isNotificationOpen) return
+
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!notificationRef.current?.contains(event.target as Node)) {
+        setIsNotificationOpen(false)
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsNotificationOpen(false)
+    }
+
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [isNotificationOpen])
 
   return (
     <header className="topbar">
@@ -118,20 +159,43 @@ export function Topbar() {
       </div>
 
       <div className="topbar__actions">
-        <button className="search-trigger" type="button">
+        <button
+          className="search-trigger"
+          type="button"
+          onClick={() => {
+            setIsProjectMenuOpen(false)
+            setIsNotificationOpen(false)
+            setIsSearchOpen(true)
+          }}
+        >
           <Search aria-hidden="true" size={18} />
           <span>Search</span>
-          <kbd>⌘ K</kbd>
+          <kbd>Ctrl K</kbd>
         </button>
 
-        <button
-          className="icon-button"
-          type="button"
-          aria-label="View notifications, 3 unread"
-        >
-          <Bell aria-hidden="true" size={19} />
-          <span className="notification-dot" aria-hidden="true" />
-        </button>
+        <div className="notification-shell" ref={notificationRef}>
+          <button
+            className="icon-button"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={isNotificationOpen}
+            aria-label={`View notifications, ${unreadNotificationCount} unread`}
+            onClick={() => {
+              setIsProjectMenuOpen(false)
+              setIsNotificationOpen((open) => !open)
+            }}
+          >
+            <Bell aria-hidden="true" size={19} />
+            {unreadNotificationCount > 0 && (
+              <span className="notification-dot" aria-hidden="true" />
+            )}
+          </button>
+          <NotificationPanel
+            isOpen={isNotificationOpen}
+            onClose={() => setIsNotificationOpen(false)}
+            onUnreadCountChange={setUnreadNotificationCount}
+          />
+        </div>
 
         <button
           className="icon-button"
@@ -162,6 +226,10 @@ export function Topbar() {
           <LogOut aria-hidden="true" size={16} />
         </button>
       </div>
+      <WorkspaceSearchDialog
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
     </header>
   )
 }

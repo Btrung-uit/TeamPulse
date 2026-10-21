@@ -5,7 +5,7 @@ status: accepted
 area: ux
 tags: [teampulse/ux, screen, project]
 created: 2026-10-14
-updated: 2026-10-16
+updated: 2026-10-21
 ---
 
 # Project List Screen
@@ -15,5 +15,7 @@ Project List có workspace switcher, search, active/archived groups và action `
 Trong `TP-013`, card chỉ hiển thị dữ liệu thật đã tồn tại: name, description, archive state và last updated. Progress, member involvement, deadline và blocked signal được hoãn tới khi task/sprint domain cung cấp query đáng tin cậy; UI không hiển thị số liệu mẫu. Leader có create/archive action và confirm modal; Member/Advisor nhận read-only list.
 
 Project switcher ở topbar chỉ đưa active project vào danh sách chọn nhanh, luôn có lối về Project List, và điều hướng bằng URL context để refresh/deep link giữ đúng project.
+
+Workspace switcher ở cuối desktop sidebar hiển thị tên workspace, member count và role của user. Chọn workspace khác điều hướng về Project List của workspace đó, loại project cũ khỏi URL và buộc toàn bộ project/member/permission context tải lại theo workspace mới.
 
 Related: [[Application Shell]], [[Empty State Component]].

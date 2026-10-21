@@ -12,11 +12,11 @@ updated: 2026-10-17
 
 Các entity đã triển khai qua `TP-010` đến `TP-020`:
 
-`User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, `ActivityLog`, `ProjectTask` (Task trong domain sản phẩm), `TaskDependency`, `TaskEvidence`, `TaskComment`.
+`User`, `Workspace`, `WorkspaceMember`, `Project`, `Sprint`, `ActivityLog`, `ProjectTask` (Task trong domain sản phẩm), `TaskDependency`, `TaskEvidence`, `TaskComment`, `Notification`.
 
 Các entity dự kiến cho các milestone tiếp theo:
 
-`Resource`, `ImportBatch`, `ImportRow`, `Notification`.
+`Resource`, `ImportBatch`, `ImportRow`.
 
 Phase 2 thêm `ConnectedRepository`, `GitHubDelivery`, `PullRequestSnapshot`, `CommitEvidence` và integration credentials.
 

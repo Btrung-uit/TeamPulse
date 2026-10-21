@@ -1136,21 +1136,32 @@ export function TaskDetailPanel({
 
             {canManage && (
               <footer className="task-detail-panel__footer">
-                <Button
-                  variant="secondary"
-                  disabled={isMutating}
-                  onClick={() => setDraft(toDraft(task))}
+                <p
+                  className="task-detail-panel__footer-help"
+                  id="task-edit-actions-help"
                 >
-                  Discard changes
-                </Button>
-                <Button
-                  type="submit"
-                  form="task-detail-form"
-                  isLoading={updateTask.isPending}
-                  loadingLabel="Saving task"
-                >
-                  Save changes
-                </Button>
+                  Discard restores the last saved values. Save applies your
+                  edits to this task.
+                </p>
+                <div className="task-detail-panel__footer-actions">
+                  <Button
+                    variant="secondary"
+                    disabled={isMutating}
+                    aria-describedby="task-edit-actions-help"
+                    onClick={() => setDraft(toDraft(task))}
+                  >
+                    Discard changes
+                  </Button>
+                  <Button
+                    type="submit"
+                    form="task-detail-form"
+                    isLoading={updateTask.isPending}
+                    loadingLabel="Saving task"
+                    aria-describedby="task-edit-actions-help"
+                  >
+                    Save changes
+                  </Button>
+                </div>
               </footer>
             )}
           </>
