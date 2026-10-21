@@ -153,7 +153,6 @@ export function Sidebar() {
           type="button"
           aria-haspopup="menu"
           aria-expanded={isWorkspaceMenuOpen}
-          aria-label={`Current workspace ${currentWorkspace?.name ?? 'Workspace'}, ${currentWorkspace?.memberCount ?? 0} ${(currentWorkspace?.memberCount ?? 0) === 1 ? 'member' : 'members'}. Switch workspace`}
           title="Switch workspace"
           onClick={() => setIsWorkspaceMenuOpen((open) => !open)}
         >
@@ -164,7 +163,9 @@ export function Sidebar() {
             <small className="sidebar__workspace-label">
               Current workspace
             </small>
+            {' '}
             <strong>{currentWorkspace?.name ?? 'Workspace'}</strong>
+            {' '}
             <small>
               {currentWorkspace?.memberCount ?? 0}{' '}
               {(currentWorkspace?.memberCount ?? 0) === 1

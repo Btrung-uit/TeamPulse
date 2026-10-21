@@ -105,7 +105,7 @@ describe('workspace switcher', () => {
 
     await user.click(
       screen.getByRole('button', {
-        name: 'Current workspace Software Engineering, 4 members. Switch workspace',
+        name: 'Current workspace Software Engineering 4 members',
       }),
     )
 
@@ -125,7 +125,7 @@ describe('workspace switcher', () => {
     )
     expect(
       screen.getByRole('button', {
-        name: 'Current workspace Database Lab, 2 members. Switch workspace',
+        name: 'Current workspace Database Lab 2 members',
       }),
     ).toBeVisible()
     expect(screen.queryByRole('menu', { name: 'Switch workspace' })).toBeNull()
@@ -149,7 +149,7 @@ describe('workspace switcher', () => {
 
     await user.click(
       screen.getByRole('button', {
-        name: 'Current workspace Software Engineering, 4 members. Switch workspace',
+        name: 'Current workspace Software Engineering 4 members',
       }),
     )
     await user.click(
