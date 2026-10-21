@@ -162,10 +162,8 @@ export function Sidebar() {
           <span className="sidebar__workspace-copy">
             <small className="sidebar__workspace-label">
               Current workspace
-            </small>
-            {' '}
-            <strong>{currentWorkspace?.name ?? 'Workspace'}</strong>
-            {' '}
+            </small>{' '}
+            <strong>{currentWorkspace?.name ?? 'Workspace'}</strong>{' '}
             <small>
               {currentWorkspace?.memberCount ?? 0}{' '}
               {(currentWorkspace?.memberCount ?? 0) === 1
