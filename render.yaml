@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: teampulse
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health/ready
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: RUN_MIGRATIONS
+        value: "true"
+      - key: ConnectionStrings__TeamPulse
+        sync: false
+      - key: Authentication__Jwt__SigningKey
+        generateValue: true

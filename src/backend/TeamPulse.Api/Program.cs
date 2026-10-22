@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Threading.RateLimiting;
@@ -10,9 +11,27 @@ using TeamPulse.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var renderPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(renderPort))
+{
+    if (!int.TryParse(renderPort, out var port) || port is < 1 or > 65535)
+    {
+        throw new InvalidOperationException("PORT must be a valid TCP port.");
+    }
+
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 builder.Services.AddInfrastructure(builder.Configuration);
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
@@ -84,6 +103,8 @@ builder.Services
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -91,6 +112,37 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseExceptionHandler();
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (context.Response.StatusCode != StatusCodes.Status404NotFound ||
+        context.Response.HasStarted ||
+        !HttpMethods.IsGet(context.Request.Method) ||
+        context.Request.Path.StartsWithSegments("/api") ||
+        context.Request.Path.StartsWithSegments("/health") ||
+        !context.Request.GetTypedHeaders().Accept.Any(mediaType =>
+            mediaType.MediaType.Value?.Equals(
+                "text/html",
+                StringComparison.OrdinalIgnoreCase) == true))
+    {
+        return;
+    }
+
+    var indexPath = Path.Combine(
+        app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
+        "index.html");
+    if (!File.Exists(indexPath))
+    {
+        return;
+    }
+
+    context.Response.Clear();
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.SendFileAsync(indexPath);
+});
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseCors(SecurityPolicies.FrontendCors);
 app.UseAuthentication();
 app.UseRateLimiter();

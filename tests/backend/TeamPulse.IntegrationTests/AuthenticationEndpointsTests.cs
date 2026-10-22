@@ -97,6 +97,24 @@ public sealed class AuthenticationEndpointsTests : IClassFixture<TeamPulseApiFac
     }
 
     [Fact]
+    public async Task Register_BehindHttpsProxy_IssuesSecureRefreshCookie()
+    {
+        using var client = CreateClient();
+        client.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
+
+        var response = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email = $"secure-cookie-{Guid.NewGuid():N}@example.com",
+            displayName = "Secure Cookie Member",
+            password = "StrongPass123",
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var setCookie = Assert.Single(response.Headers.GetValues("Set-Cookie"));
+        Assert.Contains("secure", setCookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Login_AfterRepeatedFailures_IsTemporarilyLockedOut()
     {
         using var client = CreateClient();

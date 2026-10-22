@@ -150,7 +150,12 @@ public static class DependencyInjection
         }
 
         services.AddDbContext<TeamPulseDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(
+                connectionString,
+                sqlOptions => sqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 6,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorNumbersToAdd: null)));
     }
 
     private static void ValidateJwtOptions(JwtOptions options)
