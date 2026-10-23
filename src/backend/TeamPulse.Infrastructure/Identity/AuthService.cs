@@ -27,43 +27,48 @@ internal sealed class AuthService(
             return AuthResult.Failed(AuthFailure.RegistrationFailed);
         }
 
-        IDbContextTransaction? transaction = null;
-        if (dbContext.Database.IsRelational())
+        var executionStrategy = dbContext.Database.CreateExecutionStrategy();
+        return await executionStrategy.ExecuteAsync(async operationCancellationToken =>
         {
-            transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        }
-
-        await using (transaction)
-        {
-            var userId = Guid.NewGuid();
-            var profile = new User(userId, normalizedEmail, displayName);
-            var account = new IdentityAccount(userId, profile.Email);
-
-            dbContext.UserProfiles.Add(profile);
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            var identityResult = await userManager.CreateAsync(account, password);
-            if (!identityResult.Succeeded)
+            IDbContextTransaction? transaction = null;
+            if (dbContext.Database.IsRelational())
             {
-                if (transaction is null)
+                transaction = await dbContext.Database.BeginTransactionAsync(
+                    operationCancellationToken);
+            }
+
+            await using (transaction)
+            {
+                var userId = Guid.NewGuid();
+                var profile = new User(userId, normalizedEmail, displayName);
+                var account = new IdentityAccount(userId, profile.Email);
+
+                dbContext.UserProfiles.Add(profile);
+                await dbContext.SaveChangesAsync(operationCancellationToken);
+
+                var identityResult = await userManager.CreateAsync(account, password);
+                if (!identityResult.Succeeded)
                 {
-                    dbContext.UserProfiles.Remove(profile);
-                    await dbContext.SaveChangesAsync(cancellationToken);
+                    if (transaction is null)
+                    {
+                        dbContext.UserProfiles.Remove(profile);
+                        await dbContext.SaveChangesAsync(operationCancellationToken);
+                    }
+
+                    return AuthResult.Failed(AuthFailure.RegistrationFailed);
                 }
 
-                return AuthResult.Failed(AuthFailure.RegistrationFailed);
+                var session = CreateSession(profile);
+                await dbContext.SaveChangesAsync(operationCancellationToken);
+
+                if (transaction is not null)
+                {
+                    await transaction.CommitAsync(operationCancellationToken);
+                }
+
+                return AuthResult.Success(session);
             }
-
-            var session = CreateSession(profile);
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            if (transaction is not null)
-            {
-                await transaction.CommitAsync(cancellationToken);
-            }
-
-            return AuthResult.Success(session);
-        }
+        }, cancellationToken);
     }
 
     public async Task<AuthResult> LoginAsync(

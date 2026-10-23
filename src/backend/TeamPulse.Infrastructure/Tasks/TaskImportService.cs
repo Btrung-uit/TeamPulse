@@ -247,6 +247,24 @@ internal sealed class TaskImportService(
         Guid confirmedByUserId,
         CancellationToken cancellationToken = default)
     {
+        var executionStrategy = dbContext.Database.CreateExecutionStrategy();
+        return await executionStrategy.ExecuteAsync(
+            operationCancellationToken => ConfirmOnceAsync(
+                workspaceId,
+                projectId,
+                batchId,
+                confirmedByUserId,
+                operationCancellationToken),
+            cancellationToken);
+    }
+
+    private async Task<TaskImportResult<TaskImportConfirmation>> ConfirmOnceAsync(
+        Guid workspaceId,
+        Guid projectId,
+        Guid batchId,
+        Guid confirmedByUserId,
+        CancellationToken cancellationToken)
+    {
         IDbContextTransaction? transaction = null;
         try
         {
