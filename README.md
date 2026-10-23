@@ -4,11 +4,13 @@
 >
 > **EN:** A project coordination hub for student teams—from tasks, deadlines, and resources to GitHub evidence, reviews, contribution reports, and presentations.
 
-![Status](https://img.shields.io/badge/status-task%20board-C9A24A)
+![Status](https://img.shields.io/badge/status-live%20demo-2E7D32)
 [![CI](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Btrung-uit/TeamPulse/actions/workflows/ci.yml)
 ![Backend](https://img.shields.io/badge/backend-ASP.NET%20Core-512BD4)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
 ![Database](https://img.shields.io/badge/database-SQL%20Server-CC2927)
+
+**Live demo:** [teampulse-xgq8.onrender.com](https://teampulse-xgq8.onrender.com)
 
 **Language / Ngôn ngữ:** [Tiếng Việt](#tiếng-việt) · [English](#english)
 
@@ -284,6 +286,17 @@ docker compose --profile app ps -a
 
 Mở `http://localhost:8080`; readiness công khai tại `http://localhost:8080/health/ready`. Hướng dẫn cấu hình production, deploy từ `main`, kiểm tra mobile, backup và rollback nằm trong [`docs/deployment/production-like.md`](docs/deployment/production-like.md).
 
+### Bản triển khai công khai
+
+MVP hiện chạy tại [https://teampulse-xgq8.onrender.com](https://teampulse-xgq8.onrender.com) với React SPA và ASP.NET Core API trong một Render Web Service tại Singapore; dữ liệu được lưu trong Azure SQL Database.
+
+- Liveness: [`/health/live`](https://teampulse-xgq8.onrender.com/health/live)
+- Readiness (bao gồm kết nối database): [`/health/ready`](https://teampulse-xgq8.onrender.com/health/ready)
+- Cấu hình triển khai: [`render.yaml`](render.yaml) và root [`Dockerfile`](Dockerfile)
+- Runbook Render/Azure SQL: [`docs/deployment/render-azure-sql.md`](docs/deployment/render-azure-sql.md)
+
+Render Free có thể spin down khi không có traffic, nên request đầu tiên sau thời gian không hoạt động có thể chậm hơn. Không commit connection string hoặc JWT signing key; chúng được cấu hình bằng secret environment variables trên Render.
+
 Tạo scenario portfolio hoàn chỉnh sau khi stack healthy:
 
 ```powershell
@@ -320,7 +333,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-MVP portfolio đã có auth, multi-workspace switch/create, workspace-scoped search, in-app assignment/review notification, project/task/planning, transactional Excel onboarding, evidence/review, dashboard, Resource Hub, Presentation Mode, accessibility states, security hardening, E2E core flow và Docker production-like. GitHub automation, realtime delivery và public cloud deployment chưa thuộc bản hiện tại.
+MVP portfolio đã có auth, multi-workspace switch/create, workspace-scoped search, in-app assignment/review notification, project/task/planning, transactional Excel onboarding, evidence/review, dashboard, Resource Hub, Presentation Mode, accessibility states, security hardening, E2E core flow, Docker production-like và bản public deployment trên Render + Azure SQL. GitHub webhook automation và realtime delivery đầy đủ vẫn thuộc Phase 2–3.
 
 ## Project Brain
 
@@ -438,6 +451,17 @@ docker compose --profile app ps -a
 
 Open `http://localhost:8080`; public readiness is available at `http://localhost:8080/health/ready`. See [`docs/deployment/production-like.md`](docs/deployment/production-like.md) for production configuration, deployment from `main`, mobile verification, backup, and rollback.
 
+### Public deployment
+
+The MVP is live at [https://teampulse-xgq8.onrender.com](https://teampulse-xgq8.onrender.com). The React SPA and ASP.NET Core API run in one Render Web Service in Singapore, backed by Azure SQL Database.
+
+- Liveness: [`/health/live`](https://teampulse-xgq8.onrender.com/health/live)
+- Readiness (including database connectivity): [`/health/ready`](https://teampulse-xgq8.onrender.com/health/ready)
+- Deployment configuration: [`render.yaml`](render.yaml) and the root [`Dockerfile`](Dockerfile)
+- Render/Azure SQL runbook: [`docs/deployment/render-azure-sql.md`](docs/deployment/render-azure-sql.md)
+
+Render Free services can spin down when idle, so the first request after an inactive period can be slower. The database connection string and JWT signing key are injected through Render secret environment variables and must never be committed.
+
 ## Continuous Integration
 
 The `CI` workflow runs for every pull request targeting `main`, every push to `main`, and manual dispatches. Its four required checks are:
@@ -452,7 +476,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-TP-021 adds planning APIs for sprint CRUD, task-to-sprint assignment, and the dependency graph. Self-references, cross-project links, and indirect cycles are rejected. Successors receive incomplete, overdue, and deadline-conflict warnings without TeamPulse automatically rescheduling work. Leaders manage planning while Members and Advisors have read-only access.
+The portfolio MVP includes authentication, multi-workspace switching and creation, workspace-scoped search, in-app assignment/review notifications, project/task planning, transactional Excel onboarding, evidence and review workflows, dashboards, Resource Hub, Presentation Mode, accessibility states, security hardening, an E2E core flow, a production-like Docker stack, and a public Render + Azure SQL deployment. Full GitHub webhook automation and realtime delivery remain Phase 2–3 work.
 
 ## Documentation
 
