@@ -96,7 +96,7 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         .HasMaxLength(48)
                         .HasColumnType("nvarchar(48)");
 
-                    b.Property<Guid>("ActorUserId")
+                    b.Property<Guid?>("ActorUserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("EntityId")
@@ -119,6 +119,17 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         .HasMaxLength(160)
                         .HasColumnType("nvarchar(160)");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasDefaultValue("User");
+
+                    b.Property<string>("SourceReference")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<Guid?>("SubjectUserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -128,6 +139,8 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ActorUserId");
+
+                    b.HasIndex("SourceReference");
 
                     b.HasIndex("SubjectUserId");
 
@@ -280,6 +293,81 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.HasIndex("ImportBatchId", "RowNumber");
 
                     b.ToTable("ImportErrorRows", (string)null);
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Integrations.GitHubWebhookDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("DeliveryId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("EventName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("LastAttemptedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PayloadSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("ProcessedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RepositoryFullName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<long?>("RepositoryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "CreatedAtUtc");
+
+                    b.ToTable("GitHubWebhookDeliveries", (string)null);
                 });
 
             modelBuilder.Entity("TeamPulse.Domain.Notifications.Notification", b =>
@@ -715,6 +803,10 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset(7)")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
 
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -722,7 +814,14 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("SubmittedByUserId")
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasDefaultValue("Manual");
+
+                    b.Property<Guid?>("SubmittedByUserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TaskId")
@@ -752,6 +851,10 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.HasIndex("WorkspaceId", "SubmittedByUserId");
 
                     b.HasIndex("WorkspaceId", "ProjectId", "TaskId", "CreatedAtUtc");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "TaskId", "Source", "ExternalId")
+                        .IsUnique()
+                        .HasFilter("[ExternalId] IS NOT NULL");
 
                     b.ToTable("TaskEvidence", (string)null);
                 });
@@ -1015,8 +1118,7 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.HasOne("TeamPulse.Domain.Users.User", "ActorUser")
                         .WithMany()
                         .HasForeignKey("ActorUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("TeamPulse.Domain.Users.User", "SubjectUser")
                         .WithMany()
@@ -1232,8 +1334,7 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.HasOne("TeamPulse.Domain.Workspaces.WorkspaceMember", "SubmittedByMember")
                         .WithMany()
                         .HasForeignKey("WorkspaceId", "SubmittedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("TeamPulse.Domain.Tasks.ProjectTask", "Task")
                         .WithMany("Evidence")

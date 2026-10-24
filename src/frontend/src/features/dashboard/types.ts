@@ -35,7 +35,7 @@ export interface DashboardPriorityTask {
 
 export interface DashboardActivity {
   id: string
-  actorUserId: string
+  actorUserId: string | null
   actorDisplayName: string
   action: string
   entityId: string

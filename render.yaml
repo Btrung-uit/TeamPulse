@@ -17,3 +17,7 @@ services:
         sync: false
       - key: Authentication__Jwt__SigningKey
         generateValue: true
+      - key: Integrations__GitHub__Webhook__Enabled
+        value: "false"
+      - key: Integrations__GitHub__Webhook__Secret
+        sync: false

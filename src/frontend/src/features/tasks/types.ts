@@ -97,12 +97,15 @@ export interface ChangeTaskStatusInput {
 export type TaskEvidenceType =
   'Commit' | 'PullRequest' | 'Issue' | 'Document' | 'Design' | 'Demo'
 
+export type TaskEvidenceSource = 'Manual' | 'GitHubAutomation'
+
 export interface TaskEvidence {
   id: string
   type: TaskEvidenceType
   url: string
   note: string | null
-  submittedBy: TaskMember
+  source?: TaskEvidenceSource
+  submittedBy: TaskMember | null
   createdAtUtc: string
 }
 

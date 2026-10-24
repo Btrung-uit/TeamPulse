@@ -4,6 +4,7 @@ using TeamPulse.Application.Common.Interfaces;
 using TeamPulse.Domain.Activities;
 using TeamPulse.Domain.Common;
 using TeamPulse.Domain.Imports;
+using TeamPulse.Domain.Integrations;
 using TeamPulse.Domain.Notifications;
 using TeamPulse.Domain.Projects;
 using TeamPulse.Domain.Resources;
@@ -50,6 +51,8 @@ public sealed class TeamPulseDbContext(
     public DbSet<ImportErrorRow> ImportErrorRows => Set<ImportErrorRow>();
 
     public DbSet<Notification> Notifications => Set<Notification>();
+
+    public DbSet<GitHubWebhookDelivery> GitHubWebhookDeliveries => Set<GitHubWebhookDelivery>();
 
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
 

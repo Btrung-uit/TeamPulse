@@ -16,6 +16,11 @@ internal sealed class ActivityLogConfiguration : IEntityTypeConfiguration<Activi
             .HasConversion<string>()
             .HasMaxLength(48)
             .IsRequired();
+        builder.Property(activity => activity.Source)
+            .HasConversion<string>()
+            .HasMaxLength(32)
+            .HasDefaultValue(ActivitySource.User)
+            .IsRequired();
         builder.Property(activity => activity.EntityType)
             .HasMaxLength(ActivityLog.EntityTypeMaximumLength)
             .IsRequired();
@@ -23,6 +28,8 @@ internal sealed class ActivityLogConfiguration : IEntityTypeConfiguration<Activi
             .HasMaxLength(ActivityLog.ValueMaximumLength);
         builder.Property(activity => activity.NewValue)
             .HasMaxLength(ActivityLog.ValueMaximumLength);
+        builder.Property(activity => activity.SourceReference)
+            .HasMaxLength(ActivityLog.SourceReferenceMaximumLength);
         builder.Property(activity => activity.OccurredAtUtc).HasPrecision(7);
 
         builder.HasOne(activity => activity.Workspace)
@@ -47,5 +54,6 @@ internal sealed class ActivityLogConfiguration : IEntityTypeConfiguration<Activi
         });
         builder.HasIndex(activity => activity.ActorUserId);
         builder.HasIndex(activity => activity.SubjectUserId);
+        builder.HasIndex(activity => activity.SourceReference);
     }
 }

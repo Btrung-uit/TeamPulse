@@ -315,12 +315,14 @@ Một task chỉ được đánh dấu Done khi:
 
 ## TP-060 — GitHub App hoặc repository webhook foundation
 
+- **Trạng thái:** Done — chọn repository webhook.
 - **Ưu tiên:** P1 · **Ước lượng:** 1.5 ngày · **Phụ thuộc:** M5
 - **Thực hiện:** Chọn một integration path, lưu credentials server-side; xác thực `X-Hub-Signature-256`, dedupe `X-GitHub-Delivery`, lưu delivery audit và xử lý async.
 - **Acceptance criteria:** Payload giả không qua signature; replay delivery không tạo evidence trùng; API phản hồi nhanh và logs truy vết được delivery.
 
 ## TP-061 — Commit/PR evidence automation và leader override
 
+- **Trạng thái:** Done — automation chạy từ repository webhook và giữ manual override của leader.
 - **Ưu tiên:** P1 · **Ước lượng:** 1.5 ngày · **Phụ thuộc:** TP-060, TP-030
 - **Thực hiện:** Parse `TP-123`; commit chỉ gắn evidence; PR ready → In Review, changes requested → Needs Changes, merged → Done, closed-unmerged → In Progress; leader override luôn ghi activity.
 - **Acceptance criteria:** Không bao giờ Done chỉ do commit; malformed code không làm crash webhook; tất cả automation change có audit trail.

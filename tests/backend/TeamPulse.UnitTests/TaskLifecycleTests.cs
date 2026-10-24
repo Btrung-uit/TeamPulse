@@ -1,3 +1,4 @@
+using TeamPulse.Domain.Activities;
 using TeamPulse.Domain.Tasks;
 
 namespace TeamPulse.UnitTests;
@@ -180,6 +181,28 @@ public sealed class TaskLifecycleTests
             Guid.NewGuid(),
             TaskEvidenceType.Commit,
             url));
+    }
+
+    [Fact]
+    public void GitHubAutomation_RequiresStableSourceReferences()
+    {
+        Assert.Throws<ArgumentException>(() => TaskEvidence.CreateGitHubAutomation(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            TaskEvidenceType.Commit,
+            "https://github.com/example/repo/commit/abcdef1",
+            null,
+            " "));
+        Assert.Throws<ArgumentException>(() => ActivityLog.CreateGitHubAutomation(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            ActivityAction.TaskEvidenceAdded,
+            nameof(ProjectTask),
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            " "));
     }
 
     [Fact]

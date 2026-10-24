@@ -33,17 +33,20 @@ internal sealed class TaskCollaborationService(
                 item.ProjectId == projectId &&
                 item.TaskId == taskId)
             .Include(item => item.SubmittedByMember)
-                .ThenInclude(member => member.User)
+                .ThenInclude(member => member!.User)
             .OrderByDescending(item => item.CreatedAtUtc)
             .Select(item => new TaskEvidenceItem(
                 item.Id,
                 item.Type,
                 item.Url,
                 item.Note,
-                new TaskMemberSummary(
-                    item.SubmittedByMember.UserId,
-                    item.SubmittedByMember.User.DisplayName,
-                    item.SubmittedByMember.User.Email),
+                item.Source,
+                item.SubmittedByMember == null
+                    ? null
+                    : new TaskMemberSummary(
+                        item.SubmittedByMember.UserId,
+                        item.SubmittedByMember.User.DisplayName,
+                        item.SubmittedByMember.User.Email),
                 item.CreatedAtUtc))
             .ToListAsync(cancellationToken);
 
@@ -130,7 +133,7 @@ internal sealed class TaskCollaborationService(
         var created = await dbContext.TaskEvidence
             .AsNoTracking()
             .Include(item => item.SubmittedByMember)
-                .ThenInclude(member => member.User)
+                .ThenInclude(member => member!.User)
             .SingleAsync(item => item.Id == evidence.Id, cancellationToken);
         return TaskResult<TaskEvidenceItem>.Success(ToEvidenceItem(created));
     }
@@ -338,10 +341,13 @@ internal sealed class TaskCollaborationService(
             evidence.Type,
             evidence.Url,
             evidence.Note,
-            new TaskMemberSummary(
-                evidence.SubmittedByMember.UserId,
-                evidence.SubmittedByMember.User.DisplayName,
-                evidence.SubmittedByMember.User.Email),
+            evidence.Source,
+            evidence.SubmittedByMember == null
+                ? null
+                : new TaskMemberSummary(
+                    evidence.SubmittedByMember.UserId,
+                    evidence.SubmittedByMember.User.DisplayName,
+                    evidence.SubmittedByMember.User.Email),
             evidence.CreatedAtUtc);
 
     private static TaskCommentItem ToCommentItem(TaskComment comment) =>

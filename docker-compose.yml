@@ -52,6 +52,8 @@ services:
       RateLimiting__Auth__PermitLimit: ${AUTH_RATE_LIMIT:-30}
       RateLimiting__Import__PermitLimit: ${IMPORT_RATE_LIMIT:-10}
       RateLimiting__WindowSeconds: ${RATE_LIMIT_WINDOW_SECONDS:-60}
+      Integrations__GitHub__Webhook__Enabled: ${GITHUB_WEBHOOK_ENABLED:-false}
+      Integrations__GitHub__Webhook__Secret: ${GITHUB_WEBHOOK_SECRET:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

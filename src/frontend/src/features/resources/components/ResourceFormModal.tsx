@@ -41,6 +41,8 @@ interface ResourceFormModalProps {
   onSaved: (resource: ProjectResource) => void
 }
 
+const githubRepositoryNamePattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/
+
 function formFor(resource?: ProjectResource): ResourceFormState {
   return {
     title: resource?.title ?? '',
@@ -109,6 +111,12 @@ export function ResourceFormModal({
     }
     if (externalId.length > 256) {
       errors.externalId = 'External ID cannot exceed 256 characters.'
+    } else if (
+      form.type === 'GitHub' &&
+      !githubRepositoryNamePattern.test(externalId)
+    ) {
+      errors.externalId =
+        'Enter the GitHub repository as owner/repository (for example, Btrung-uit/TeamPulse).'
     }
     if (!form.ownerUserId) errors.ownerUserId = 'Choose an owner.'
     setFieldErrors(errors)
@@ -221,7 +229,17 @@ export function ResourceFormModal({
           onChange={(event) => update('url', event.target.value)}
         />
         <Input
-          label="External ID (optional)"
+          label={
+            form.type === 'GitHub'
+              ? 'Repository (owner/repository)'
+              : 'External ID (optional)'
+          }
+          helperText={
+            form.type === 'GitHub'
+              ? 'Required to route repository webhook events to this project.'
+              : undefined
+          }
+          placeholder={form.type === 'GitHub' ? 'owner/repository' : undefined}
           value={form.externalId}
           error={fieldErrors.externalId}
           maxLength={256}

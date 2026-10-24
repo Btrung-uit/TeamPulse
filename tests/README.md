@@ -20,6 +20,24 @@ The TP-026 regression baseline is intentionally split by test level:
 | Task form validation and API submission boundaries | `src/frontend/src/features/tasks/TaskBoardFlow.test.tsx` |
 | Status badges and task-card state cues | `src/frontend/src/components/ui/ComponentPrimitives.test.tsx` |
 
+## Phase 2 repository webhook foundation
+
+`GitHubWebhookEndpointsTests` protects the TP-060 trust boundary:
+
+- invalid HMAC-SHA256 signatures are rejected before persistence;
+- valid deliveries are persisted and completed by the background worker;
+- replayed `X-GitHub-Delivery` values do not create duplicate audit records;
+- unsupported events/actions are retained as `Ignored` without processing;
+- disabled integration does not accept deliveries.
+
+`GitHubTaskAutomationTests` protects the TP-061 workflow boundary:
+
+- commits create idempotent evidence and never complete a task;
+- malformed task references are ignored without failing the delivery;
+- PR ready/review/merge/closed events follow the task lifecycle;
+- every automated change records a GitHub-sourced activity with its delivery ID;
+- a leader's later manual override remains attributed to that user.
+
 Run the same complete baseline used by CI from the repository root:
 
 ```bash

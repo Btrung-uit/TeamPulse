@@ -23,7 +23,8 @@ public sealed record TaskEvidenceItem(
     TaskEvidenceType Type,
     string Url,
     string? Note,
-    TaskMemberSummary SubmittedBy,
+    TaskEvidenceSource Source,
+    TaskMemberSummary? SubmittedBy,
     DateTimeOffset CreatedAtUtc);
 
 public sealed record TaskCommentItem(

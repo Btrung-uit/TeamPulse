@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using TeamPulse.Api.Contracts;
 using TeamPulse.Application.Resources;
 using TeamPulse.Domain.Resources;
@@ -7,7 +8,7 @@ using TeamPulse.Infrastructure.Authorization;
 
 namespace TeamPulse.Api.Endpoints;
 
-public static class ResourceEndpoints
+public static partial class ResourceEndpoints
 {
     public static IEndpointRouteBuilder MapResourceEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -158,6 +159,12 @@ public static class ResourceEndpoints
         {
             errors["externalId"] = [$"External ID cannot exceed {ProjectResource.ExternalIdMaximumLength} characters."];
         }
+        else if (type == ResourceType.GitHub &&
+                 (externalId is null || !GitHubRepositoryNamePattern().IsMatch(externalId)))
+        {
+            errors["externalId"] =
+                ["GitHub resources require an External ID in owner/repository format."];
+        }
 
         if (!request.OwnerUserId.HasValue || request.OwnerUserId == Guid.Empty)
         {
@@ -250,4 +257,9 @@ public static class ResourceEndpoints
             "validation_failed",
             "Please correct the highlighted fields.",
             new Dictionary<string, string[]> { [field] = [message] }));
+
+    [GeneratedRegex(
+        "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex GitHubRepositoryNamePattern();
 }

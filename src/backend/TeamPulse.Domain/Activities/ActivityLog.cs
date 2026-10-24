@@ -7,6 +7,7 @@ public sealed class ActivityLog
 {
     public const int EntityTypeMaximumLength = 80;
     public const int ValueMaximumLength = 160;
+    public const int SourceReferenceMaximumLength = 128;
 
     private ActivityLog()
     {
@@ -23,11 +24,46 @@ public sealed class ActivityLog
         Guid? subjectUserId = null,
         string? previousValue = null,
         string? newValue = null)
+        : this(
+            id,
+            workspaceId,
+            actorUserId,
+            ActivitySource.User,
+            action,
+            entityType,
+            entityId,
+            occurredAtUtc,
+            subjectUserId,
+            previousValue,
+            newValue,
+            sourceReference: null)
     {
-        if (id == Guid.Empty || workspaceId == Guid.Empty || actorUserId == Guid.Empty ||
-            entityId == Guid.Empty)
+    }
+
+    private ActivityLog(
+        Guid id,
+        Guid workspaceId,
+        Guid? actorUserId,
+        ActivitySource source,
+        ActivityAction action,
+        string entityType,
+        Guid entityId,
+        DateTimeOffset occurredAtUtc,
+        Guid? subjectUserId,
+        string? previousValue,
+        string? newValue,
+        string? sourceReference)
+    {
+        if (id == Guid.Empty || workspaceId == Guid.Empty || entityId == Guid.Empty)
         {
             throw new ArgumentException("Activity identifiers cannot be empty.");
+        }
+
+        if (!Enum.IsDefined(source) ||
+            (source == ActivitySource.User && (!actorUserId.HasValue || actorUserId == Guid.Empty)) ||
+            (source != ActivitySource.User && actorUserId.HasValue))
+        {
+            throw new ArgumentException("Activity source and actor are inconsistent.");
         }
 
         if (!Enum.IsDefined(action))
@@ -38,6 +74,7 @@ public sealed class ActivityLog
         Id = id;
         WorkspaceId = workspaceId;
         ActorUserId = actorUserId;
+        Source = source;
         SubjectUserId = subjectUserId;
         Action = action;
         EntityType = Required(entityType, nameof(entityType), EntityTypeMaximumLength);
@@ -45,13 +82,48 @@ public sealed class ActivityLog
         OccurredAtUtc = occurredAtUtc;
         PreviousValue = Optional(previousValue, nameof(previousValue), ValueMaximumLength);
         NewValue = Optional(newValue, nameof(newValue), ValueMaximumLength);
+        SourceReference = source == ActivitySource.GitHubAutomation
+            ? Required(
+                sourceReference,
+                nameof(sourceReference),
+                SourceReferenceMaximumLength)
+            : Optional(
+                sourceReference,
+                nameof(sourceReference),
+                SourceReferenceMaximumLength);
     }
+
+    public static ActivityLog CreateGitHubAutomation(
+        Guid id,
+        Guid workspaceId,
+        ActivityAction action,
+        string entityType,
+        Guid entityId,
+        DateTimeOffset occurredAtUtc,
+        string deliveryId,
+        string? previousValue = null,
+        string? newValue = null) =>
+        new(
+            id,
+            workspaceId,
+            actorUserId: null,
+            ActivitySource.GitHubAutomation,
+            action,
+            entityType,
+            entityId,
+            occurredAtUtc,
+            subjectUserId: null,
+            previousValue,
+            newValue,
+            deliveryId);
 
     public Guid Id { get; private set; }
 
     public Guid WorkspaceId { get; private set; }
 
-    public Guid ActorUserId { get; private set; }
+    public Guid? ActorUserId { get; private set; }
+
+    public ActivitySource Source { get; private set; }
 
     public Guid? SubjectUserId { get; private set; }
 
@@ -65,11 +137,13 @@ public sealed class ActivityLog
 
     public string? NewValue { get; private set; }
 
+    public string? SourceReference { get; private set; }
+
     public DateTimeOffset OccurredAtUtc { get; private set; }
 
     public Workspace Workspace { get; private set; } = null!;
 
-    public User ActorUser { get; private set; } = null!;
+    public User? ActorUser { get; private set; }
 
     public User? SubjectUser { get; private set; }
 

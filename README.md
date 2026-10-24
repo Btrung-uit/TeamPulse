@@ -79,7 +79,7 @@ Todo → In Progress → Evidence Linked → In Review → Done
 | Persistence    | SQL Server, Entity Framework Core |
 | Authentication | ASP.NET Core Identity, JWT ngắn hạn + refresh cookie |
 | Excel          | ClosedXML                         |
-| Integration    | Metadata/link ngoài; chưa có webhook tự động |
+| Integration    | Resource mapping; repository webhook bảo mật; commit/PR automation |
 | Delivery       | Docker Compose, GitHub Actions    |
 | Architecture   | Modular monolith trong monorepo   |
 
@@ -261,6 +261,14 @@ Các health endpoint:
 
 Kiểm tra production build của frontend bằng `npm run build`. Dừng hạ tầng local bằng `docker compose down`; named volume giữ lại dữ liệu giữa các lần chạy.
 
+### Cấu hình GitHub repository webhook
+
+TP-060 cung cấp endpoint `POST /api/integrations/github/webhook`, xác thực `X-Hub-Signature-256`, chống replay bằng `X-GitHub-Delivery`, lưu audit bền vững và xử lý delivery bất đồng bộ. TP-061 tự gắn commit/PR evidence, chuyển trạng thái theo vòng đời PR và giữ manual override của leader với audit actor rõ ràng. Webhook mặc định tắt; secret chỉ được cấu hình server-side.
+
+Hướng dẫn tạo secret, bật integration và cấu hình event trong GitHub: [`docs/integrations/github-repository-webhook.md`](docs/integrations/github-repository-webhook.md).
+
+Để route webhook vào đúng project, tạo Resource loại `GitHub` với External ID theo dạng `owner/repository`. Commit message hoặc PR title/body phải chứa task code như `TP-123`.
+
 ### E2E core demo flow
 
 Playwright tự khởi động frontend và một API riêng dùng database InMemory sạch, sau đó chạy luồng `Leader import → Member evidence → Leader review → Dashboard/Presentation`. Không cần Docker hay SQL Server cho smoke test này:
@@ -333,7 +341,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-MVP portfolio đã có auth, multi-workspace switch/create, workspace-scoped search, in-app assignment/review notification, project/task/planning, transactional Excel onboarding, evidence/review, dashboard, Resource Hub, Presentation Mode, accessibility states, security hardening, E2E core flow, Docker production-like và bản public deployment trên Render + Azure SQL. GitHub webhook automation và realtime delivery đầy đủ vẫn thuộc Phase 2–3.
+MVP portfolio đã có auth, multi-workspace switch/create, workspace-scoped search, in-app assignment/review notification, project/task/planning, transactional Excel onboarding, evidence/review, dashboard, Resource Hub, Presentation Mode, accessibility states, security hardening, E2E core flow, Docker production-like và bản public deployment trên Render + Azure SQL. Repository webhook đã có signature verification, deduplication, delivery audit, background processing và commit/PR evidence-status automation; PR Waiting Room, notification nâng cao và realtime delivery vẫn thuộc Phase 2–3.
 
 ## Project Brain
 
@@ -370,7 +378,7 @@ Task → Evidence → Review → Contribution Report → Presentation
 - Transactional Excel import with mapping and preview, plus `.xlsx` export.
 - Resource links for Google Docs, Drive, Canva, GitHub, and deployed demos.
 - Presentation Mode for project demonstrations and assessment.
-- GitHub PR Waiting Room, webhook automation, and evidence-driven task transitions.
+- Secure repository webhook intake with evidence-driven task transitions; PR Waiting Room remains planned.
 - Monitoring-first mobile experience for Home, My Tasks, Inbox, PRs, and Resources.
 
 ## Planned stack
@@ -380,7 +388,7 @@ React + TypeScript, ASP.NET Core Web API, SQL Server, Entity Framework Core, ASP
 ## Delivery phases
 
 - **MVP:** core identity, work management, dashboards, activity/evidence, Excel onboarding, resource links, presentation, and Git command guidance.
-- **Phase 2:** GitHub App/webhooks, PR Waiting Room, workflow automation, realtime updates, and richer notifications.
+- **Phase 2:** repository webhook foundation, commit/PR workflow automation, PR Waiting Room, realtime updates, and richer notifications.
 - **Phase 3:** Drive integration, dependency visualization, advisor views, and advanced analytics.
 
 ## Run locally
@@ -439,6 +447,10 @@ Health endpoints:
 
 Verify the frontend production build with `npm run build`. Stop local infrastructure with `docker compose down`; the named volume preserves data between runs.
 
+### GitHub repository webhook
+
+TP-060 exposes `POST /api/integrations/github/webhook` with HMAC-SHA256 signature verification, delivery deduplication, durable audit records, and asynchronous processing. TP-061 adds idempotent commit/PR evidence, PR-driven task transitions, system-attributed activities, and auditable leader overrides. It is disabled by default and its secret remains server-side. See [`docs/integrations/github-repository-webhook.md`](docs/integrations/github-repository-webhook.md) for repository mapping, setup, events, and lifecycle rules.
+
 ### Production-like Docker stack
 
 Run SQL Server, a one-shot EF migration bundle, the API, and the Nginx-hosted frontend with:
@@ -476,7 +488,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-The portfolio MVP includes authentication, multi-workspace switching and creation, workspace-scoped search, in-app assignment/review notifications, project/task planning, transactional Excel onboarding, evidence and review workflows, dashboards, Resource Hub, Presentation Mode, accessibility states, security hardening, an E2E core flow, a production-like Docker stack, and a public Render + Azure SQL deployment. Full GitHub webhook automation and realtime delivery remain Phase 2–3 work.
+The portfolio MVP includes authentication, multi-workspace switching and creation, workspace-scoped search, in-app assignment/review notifications, project/task planning, transactional Excel onboarding, evidence and review workflows, dashboards, Resource Hub, Presentation Mode, accessibility states, security hardening, an E2E core flow, a production-like Docker stack, and a public Render + Azure SQL deployment. The repository webhook verifies signatures, deduplicates deliveries, stores an audit trail, processes deliveries asynchronously, and automates commit/PR evidence and task status; PR Waiting Room, richer notifications, and realtime delivery remain Phase 2–3 work.
 
 ## Documentation
 

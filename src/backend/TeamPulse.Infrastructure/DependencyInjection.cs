@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using TeamPulse.Application.Authentication;
 using TeamPulse.Application.Common.Interfaces;
 using TeamPulse.Application.Dashboard;
+using TeamPulse.Application.Integrations;
 using TeamPulse.Application.Notifications;
 using TeamPulse.Application.Projects;
 using TeamPulse.Application.Resources;
@@ -22,6 +23,7 @@ using TeamPulse.Domain.Workspaces;
 using TeamPulse.Infrastructure.Authorization;
 using TeamPulse.Infrastructure.Dashboard;
 using TeamPulse.Infrastructure.Identity;
+using TeamPulse.Infrastructure.Integrations.GitHub;
 using TeamPulse.Infrastructure.Multitenancy;
 using TeamPulse.Infrastructure.Notifications;
 using TeamPulse.Infrastructure.Persistence;
@@ -122,6 +124,21 @@ public static class DependencyInjection
         services.AddScoped<IResourceService, ResourceService>();
         services.AddScoped<IWorkspaceSearchService, WorkspaceSearchService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IGitHubWebhookReceiver, GitHubWebhookReceiver>();
+        services.AddScoped<IGitHubWebhookEventHandler, GitHubTaskAutomationHandler>();
+        services.AddHostedService<GitHubWebhookWorker>();
+
+        services
+            .AddOptions<GitHubWebhookOptions>()
+            .Bind(configuration.GetSection(GitHubWebhookOptions.SectionName))
+            .Validate(
+                options => options.MaximumPayloadBytes is >= 1024 and <= 25 * 1024 * 1024,
+                "GitHub webhook maximum payload size must be between 1 KB and 25 MB.")
+            .Validate(
+                options => !options.Enabled ||
+                    Encoding.UTF8.GetByteCount(options.Secret) >= GitHubWebhookOptions.MinimumSecretBytes,
+                $"Enabled GitHub webhooks require a secret of at least {GitHubWebhookOptions.MinimumSecretBytes} UTF-8 bytes.")
+            .ValidateOnStart();
 
         return services;
     }

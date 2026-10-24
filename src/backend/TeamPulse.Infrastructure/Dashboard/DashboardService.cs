@@ -128,7 +128,7 @@ internal sealed class DashboardService(
             .Select(activity => new DashboardActivityItem(
                 activity.Id,
                 activity.ActorUserId,
-                activity.ActorUser.DisplayName,
+                activity.ActorUser?.DisplayName ?? "GitHub automation",
                 activity.Action,
                 activity.EntityId,
                 taskById.GetValueOrDefault(activity.EntityId)?.Code,
@@ -142,9 +142,10 @@ internal sealed class DashboardService(
             .Where(evidence =>
                 evidence.WorkspaceId == workspaceId &&
                 evidence.ProjectId == projectId &&
+                evidence.SubmittedByUserId.HasValue &&
                 evidence.Task.Status == ProjectTaskStatus.Done)
             .Select(evidence => new ContributionEvent(
-                evidence.SubmittedByUserId,
+                evidence.SubmittedByUserId!.Value,
                 evidence.CreatedAtUtc))
             .ToListAsync(cancellationToken);
         var reviews = await dbContext.TaskComments

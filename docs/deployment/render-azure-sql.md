@@ -38,6 +38,8 @@ Set these environment variables in Render. Never commit their real values:
 | `RUN_MIGRATIONS`                  | `true`                                           |
 | `ConnectionStrings__TeamPulse`    | Azure SQL ADO.NET connection string              |
 | `Authentication__Jwt__SigningKey` | Random secret containing at least 32 UTF-8 bytes |
+| `Integrations__GitHub__Webhook__Enabled` | `true` only after the repository webhook is configured |
+| `Integrations__GitHub__Webhook__Secret` | Random webhook secret containing at least 32 UTF-8 bytes |
 
 The Azure SQL connection string must use encryption and certificate validation:
 
@@ -45,7 +47,7 @@ The Azure SQL connection string must use encryption and certificate validation:
 Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<database>;Persist Security Info=False;User ID=<user>;Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
 ```
 
-The committed `render.yaml` describes the same service for a new Blueprint. `ConnectionStrings__TeamPulse` is prompted as a secret, and Render generates the JWT signing key.
+The committed `render.yaml` describes the same service for a new Blueprint. `ConnectionStrings__TeamPulse` and the optional GitHub webhook secret are prompted as secrets, and Render generates the JWT signing key. Keep the webhook disabled until the same secret and public payload URL have been saved in the GitHub repository settings.
 
 ## Azure SQL firewall
 

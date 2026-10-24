@@ -15,11 +15,18 @@ internal sealed class TaskEvidenceConfiguration : IEntityTypeConfiguration<TaskE
             .HasConversion<string>()
             .HasMaxLength(24)
             .IsRequired();
+        builder.Property(evidence => evidence.Source)
+            .HasConversion<string>()
+            .HasMaxLength(32)
+            .HasDefaultValue(TaskEvidenceSource.Manual)
+            .IsRequired();
         builder.Property(evidence => evidence.Url)
             .HasMaxLength(TaskEvidence.UrlMaximumLength)
             .IsRequired();
         builder.Property(evidence => evidence.Note)
             .HasMaxLength(TaskEvidence.NoteMaximumLength);
+        builder.Property(evidence => evidence.ExternalId)
+            .HasMaxLength(TaskEvidence.ExternalIdMaximumLength);
 
         builder.HasOne(evidence => evidence.Task)
             .WithMany(task => task.Evidence)
@@ -36,6 +43,7 @@ internal sealed class TaskEvidenceConfiguration : IEntityTypeConfiguration<TaskE
             .WithMany()
             .HasForeignKey(evidence => new { evidence.WorkspaceId, evidence.SubmittedByUserId })
             .HasPrincipalKey(member => new { member.WorkspaceId, member.UserId })
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(evidence => new
@@ -45,6 +53,16 @@ internal sealed class TaskEvidenceConfiguration : IEntityTypeConfiguration<TaskE
             evidence.TaskId,
             evidence.CreatedAtUtc,
         });
+        builder.HasIndex(evidence => new
+        {
+            evidence.WorkspaceId,
+            evidence.ProjectId,
+            evidence.TaskId,
+            evidence.Source,
+            evidence.ExternalId,
+        })
+            .IsUnique()
+            .HasFilter("[ExternalId] IS NOT NULL");
         builder.ConfigureAuditProperties();
     }
 }

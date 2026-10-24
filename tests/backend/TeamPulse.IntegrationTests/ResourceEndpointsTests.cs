@@ -39,8 +39,25 @@ public sealed class ResourceEndpointsTests : IClassFixture<TeamPulseApiFactory>
 
         var invalidOwner = await leader.Client.PostAsJsonAsync(
             resourcesUrl,
-            SaveResource("Wrong owner", "GitHub", "https://github.com/example/repo", outsider.UserId));
+            SaveResource(
+                "Wrong owner",
+                "GitHub",
+                "https://github.com/example/repo",
+                outsider.UserId,
+                "example/repo"));
         await AssertErrorAsync(invalidOwner, HttpStatusCode.BadRequest, "owner_not_found");
+
+        var missingRepositoryMapping = await leader.Client.PostAsJsonAsync(
+            resourcesUrl,
+            SaveResource(
+                "Unmapped repository",
+                "GitHub",
+                "https://github.com/example/repo",
+                member.UserId));
+        await AssertErrorAsync(
+            missingRepositoryMapping,
+            HttpStatusCode.BadRequest,
+            "validation_failed");
 
         var memberCreate = await member.Client.PostAsJsonAsync(
             resourcesUrl,

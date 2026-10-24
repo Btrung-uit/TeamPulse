@@ -209,7 +209,8 @@ public static class TaskCollaborationEndpoints
             evidence.Type.ToString(),
             evidence.Url,
             evidence.Note,
-            ToResponse(evidence.SubmittedBy),
+            evidence.Source.ToString(),
+            evidence.SubmittedBy is null ? null : ToResponse(evidence.SubmittedBy),
             evidence.CreatedAtUtc);
 
     private static TaskCommentResponse ToResponse(TaskCommentItem comment) =>
@@ -241,7 +242,8 @@ public static class TaskCollaborationEndpoints
         string Type,
         string Url,
         string? Note,
-        TaskMemberResponse SubmittedBy,
+        string Source,
+        TaskMemberResponse? SubmittedBy,
         DateTimeOffset CreatedAtUtc);
     private sealed record TaskCommentResponse(
         Guid Id,

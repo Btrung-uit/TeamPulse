@@ -904,8 +904,9 @@ export function TaskDetailPanel({
                             {item.type.replace('PullRequest', 'Pull request')}
                           </strong>
                           <span>
-                            {item.submittedBy.displayName} ·{' '}
-                            {new Date(item.createdAtUtc).toLocaleString()}
+                            {item.submittedBy?.displayName ??
+                              'GitHub automation'}{' '}
+                            · {new Date(item.createdAtUtc).toLocaleString()}
                           </span>
                         </div>
                         <a href={item.url} target="_blank" rel="noreferrer">

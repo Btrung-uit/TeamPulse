@@ -33,7 +33,7 @@ public sealed record DashboardPriorityTask(
 
 public sealed record DashboardActivityItem(
     Guid Id,
-    Guid ActorUserId,
+    Guid? ActorUserId,
     string ActorDisplayName,
     ActivityAction Action,
     Guid EntityId,

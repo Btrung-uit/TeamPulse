@@ -187,4 +187,31 @@ describe('Resource Hub flow', () => {
       screen.getByLabelText('Open Architecture notes externally'),
     ).toHaveAttribute('target', '_blank')
   })
+
+  it('requires owner/repository mapping for GitHub resources', async () => {
+    const user = userEvent.setup()
+    const fetchMock = mockApi()
+    renderHub()
+
+    await screen.findAllByText('Architecture notes')
+    await user.click(screen.getByRole('button', { name: 'Add resource' }))
+    await user.type(screen.getByLabelText('Title'), 'Repository')
+    await user.type(
+      screen.getByLabelText('External URL'),
+      'https://github.com/Btrung-uit/TeamPulse',
+    )
+    await user.selectOptions(screen.getAllByLabelText('Type')[1], 'GitHub')
+    await user.selectOptions(screen.getByLabelText('Owner'), 'member-1')
+    const addButtons = screen.getAllByRole('button', { name: 'Add resource' })
+    await user.click(addButtons[addButtons.length - 1])
+
+    expect(
+      await screen.findByText(
+        /enter the github repository as owner\/repository/i,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      fetchMock.mock.calls.some(([, init]) => init?.method === 'POST'),
+    ).toBe(false)
+  })
 })

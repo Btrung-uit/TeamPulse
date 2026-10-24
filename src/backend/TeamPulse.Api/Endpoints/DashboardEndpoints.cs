@@ -100,7 +100,7 @@ public static class DashboardEndpoints
         DateOnly? DueOn);
     private sealed record ActivityResponse(
         Guid Id,
-        Guid ActorUserId,
+        Guid? ActorUserId,
         string ActorDisplayName,
         string Action,
         Guid EntityId,
