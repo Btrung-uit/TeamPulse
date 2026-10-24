@@ -295,6 +295,106 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.ToTable("ImportErrorRows", (string)null);
                 });
 
+            modelBuilder.Entity("TeamPulse.Domain.Integrations.GitHubPullRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AuthorLogin")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CheckStatus")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTimeOffset>("LastActivityAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("OpenedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RepositoryFullName")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("nvarchar(240)");
+
+                    b.Property<string>("RequestedReviewers")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "RepositoryFullName", "Number")
+                        .IsUnique();
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "Status", "LastActivityAtUtc");
+
+                    b.ToTable("GitHubPullRequests", (string)null);
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Integrations.GitHubPullRequestTask", b =>
+                {
+                    b.Property<Guid>("PullRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TaskId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PullRequestId", "TaskId");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "PullRequestId");
+
+                    b.HasIndex("WorkspaceId", "ProjectId", "TaskId");
+
+                    b.ToTable("GitHubPullRequestTasks", (string)null);
+                });
+
             modelBuilder.Entity("TeamPulse.Domain.Integrations.GitHubWebhookDelivery", b =>
                 {
                     b.Property<Guid>("Id")
@@ -381,6 +481,10 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset(7)")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
 
+                    b.Property<string>("ExternalUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -400,6 +504,10 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("RecipientUserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("SourceReference")
+                        .HasMaxLength(240)
+                        .HasColumnType("nvarchar(240)");
+
                     b.Property<Guid?>("TaskId")
                         .HasColumnType("uniqueidentifier");
 
@@ -418,6 +526,10 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "RecipientUserId", "SourceReference")
+                        .IsUnique()
+                        .HasFilter("[SourceReference] IS NOT NULL");
 
                     b.HasIndex("WorkspaceId", "RecipientUserId", "ReadAtUtc", "CreatedAtUtc");
 
@@ -1170,6 +1282,39 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
                     b.Navigation("ImportBatch");
                 });
 
+            modelBuilder.Entity("TeamPulse.Domain.Integrations.GitHubPullRequest", b =>
+                {
+                    b.HasOne("TeamPulse.Domain.Projects.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ProjectId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Integrations.GitHubPullRequestTask", b =>
+                {
+                    b.HasOne("TeamPulse.Domain.Integrations.GitHubPullRequest", "PullRequest")
+                        .WithMany("TaskLinks")
+                        .HasForeignKey("WorkspaceId", "ProjectId", "PullRequestId")
+                        .HasPrincipalKey("WorkspaceId", "ProjectId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TeamPulse.Domain.Tasks.ProjectTask", "Task")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ProjectId", "TaskId")
+                        .HasPrincipalKey("WorkspaceId", "ProjectId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PullRequest");
+
+                    b.Navigation("Task");
+                });
+
             modelBuilder.Entity("TeamPulse.Domain.Notifications.Notification", b =>
                 {
                     b.HasOne("TeamPulse.Domain.Workspaces.WorkspaceMember", null)
@@ -1403,6 +1548,11 @@ namespace TeamPulse.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("TeamPulse.Domain.Imports.ImportBatch", b =>
                 {
                     b.Navigation("Errors");
+                });
+
+            modelBuilder.Entity("TeamPulse.Domain.Integrations.GitHubPullRequest", b =>
+                {
+                    b.Navigation("TaskLinks");
                 });
 
             modelBuilder.Entity("TeamPulse.Domain.Projects.Project", b =>

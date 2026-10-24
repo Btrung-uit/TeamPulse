@@ -38,6 +38,13 @@ The TP-026 regression baseline is intentionally split by test level:
 - every automated change records a GitHub-sourced activity with its delivery ID;
 - a leader's later manual override remains attributed to that user.
 
+The same integration suite protects the TP-062 projection boundary:
+
+- Waiting/Changes/Merged filters reflect PR webhook state;
+- linked tasks, author, requested reviewers, and check-suite outcome are projected;
+- actionable PR events create recipient-scoped notifications with the exact GitHub URL;
+- the frontend waiting-room and notification tests keep the GitHub deep links actionable.
+
 Run the same complete baseline used by CI from the repository root:
 
 ```bash

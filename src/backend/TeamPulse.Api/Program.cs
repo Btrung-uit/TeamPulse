@@ -179,6 +179,7 @@ app.MapResourceEndpoints();
 app.MapSearchEndpoints();
 app.MapNotificationEndpoints();
 app.MapGitHubWebhookEndpoints();
+app.MapGitHubPullRequestEndpoints();
 
 app.Run();
 

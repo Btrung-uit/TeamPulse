@@ -16,6 +16,7 @@ public sealed record NotificationDetails(
     string Message,
     Guid ProjectId,
     Guid? TaskId,
+    string? ExternalUrl,
     bool IsRead,
     DateTimeOffset CreatedAtUtc);
 

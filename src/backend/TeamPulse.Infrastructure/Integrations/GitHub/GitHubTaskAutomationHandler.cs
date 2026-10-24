@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TeamPulse.Application.Integrations;
 using TeamPulse.Domain.Activities;
+using TeamPulse.Domain.Integrations;
+using TeamPulse.Domain.Notifications;
 using TeamPulse.Domain.Projects;
 using TeamPulse.Domain.Resources;
 using TeamPulse.Domain.Tasks;
@@ -29,8 +31,10 @@ internal sealed partial class GitHubTaskAutomationHandler(
             return;
         }
 
-        var automation = ParseAutomation(webhookEvent);
-        if (automation is null || automation.TaskCodes.Count == 0)
+        var automation = ParseAutomation(webhookEvent) ?? ParsedAutomation.Empty;
+        var projectsPullRequests = webhookEvent.EventName is
+            "pull_request" or "pull_request_review" or "check_suite";
+        if (automation.TaskCodes.Count == 0 && !projectsPullRequests)
         {
             return;
         }
@@ -57,11 +61,327 @@ internal sealed partial class GitHubTaskAutomationHandler(
 
         foreach (var mapping in mappings)
         {
-            await ApplyToProjectAsync(
-                mapping,
-                automation,
+            if (projectsPullRequests)
+            {
+                await ApplyPullRequestProjectionAsync(
+                    mapping,
+                    automation,
+                    webhookEvent,
+                    cancellationToken);
+            }
+
+            if (automation.TaskCodes.Count > 0)
+            {
+                await ApplyToProjectAsync(
+                    mapping,
+                    automation,
+                    webhookEvent.DeliveryId,
+                    cancellationToken);
+            }
+        }
+    }
+
+    private async Task ApplyPullRequestProjectionAsync(
+        ProjectMapping mapping,
+        ParsedAutomation automation,
+        GitHubWebhookEvent webhookEvent,
+        CancellationToken cancellationToken)
+    {
+        using var document = JsonDocument.Parse(webhookEvent.Payload);
+        var root = document.RootElement;
+        if (webhookEvent.EventName == "check_suite")
+        {
+            await ApplyCheckSuiteAsync(mapping, webhookEvent, root, cancellationToken);
+            return;
+        }
+
+        if (!TryGetObject(root, "pull_request", out var payload))
+        {
+            return;
+        }
+
+        var number = GetInt32(payload, "number") ?? GetInt32(root, "number");
+        if (!number.HasValue || number <= 0)
+        {
+            return;
+        }
+
+        var pullRequest = await dbContext.GitHubPullRequests
+            .IgnoreQueryFilters()
+            .Include(item => item.TaskLinks)
+            .SingleOrDefaultAsync(item =>
+                item.WorkspaceId == mapping.WorkspaceId &&
+                item.ProjectId == mapping.ProjectId &&
+                item.RepositoryFullName == mapping.RepositoryFullName &&
+                item.Number == number.Value,
+                cancellationToken);
+        var now = timeProvider.GetUtcNow();
+        var title = GetString(payload, "title") ?? $"Pull request #{number.Value}";
+        var url = GetString(payload, "html_url") ??
+            $"https://github.com/{mapping.RepositoryFullName}/pull/{number.Value}";
+        var authorLogin = TryGetObject(payload, "user", out var author)
+            ? GetString(author, "login")
+            : pullRequest?.AuthorLogin;
+        var requestedReviewers = GetRequestedReviewers(payload) ??
+            pullRequest?.RequestedReviewers;
+        var status = ResolvePullRequestStatus(
+            webhookEvent.EventName,
+            webhookEvent.Action,
+            payload,
+            root,
+            pullRequest?.Status);
+        var openedAt = GetDateTimeOffset(payload, "created_at") ?? now;
+
+        if (pullRequest is null)
+        {
+            pullRequest = new GitHubPullRequest(
+                Guid.NewGuid(),
+                mapping.WorkspaceId,
+                mapping.ProjectId,
+                mapping.RepositoryFullName,
+                number.Value,
+                title,
+                url,
+                authorLogin,
+                requestedReviewers,
+                status,
+                openedAt,
+                now);
+            dbContext.GitHubPullRequests.Add(pullRequest);
+        }
+        else
+        {
+            pullRequest.Update(
+                title,
+                url,
+                authorLogin,
+                requestedReviewers,
+                status,
+                now);
+        }
+
+        if (webhookEvent.Action == "synchronize")
+        {
+            pullRequest.UpdateChecks(GitHubCheckStatus.Pending, now);
+        }
+
+        var linkedTasks = await dbContext.Tasks
+            .IgnoreQueryFilters()
+            .Where(task =>
+                task.WorkspaceId == mapping.WorkspaceId &&
+                task.ProjectId == mapping.ProjectId &&
+                !task.IsArchived &&
+                automation.TaskCodes.Contains(task.Code.Value))
+            .ToListAsync(cancellationToken);
+        SynchronizeTaskLinks(pullRequest, linkedTasks);
+        await AddLifecycleNotificationsAsync(
+            pullRequest,
+            linkedTasks,
+            webhookEvent,
+            cancellationToken);
+    }
+
+    private async Task ApplyCheckSuiteAsync(
+        ProjectMapping mapping,
+        GitHubWebhookEvent webhookEvent,
+        JsonElement root,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetObject(root, "check_suite", out var checkSuite) ||
+            !checkSuite.TryGetProperty("pull_requests", out var pullRequests) ||
+            pullRequests.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        var checkStatus = ResolveCheckStatus(checkSuite);
+        var numbers = pullRequests.EnumerateArray()
+            .Select(item => GetInt32(item, "number"))
+            .Where(number => number is > 0)
+            .Select(number => number!.Value)
+            .Distinct()
+            .ToArray();
+        if (numbers.Length == 0)
+        {
+            return;
+        }
+
+        var snapshots = await dbContext.GitHubPullRequests
+            .IgnoreQueryFilters()
+            .Include(item => item.TaskLinks)
+                .ThenInclude(link => link.Task)
+            .Where(item =>
+                item.WorkspaceId == mapping.WorkspaceId &&
+                item.ProjectId == mapping.ProjectId &&
+                item.RepositoryFullName == mapping.RepositoryFullName &&
+                numbers.Contains(item.Number))
+            .ToListAsync(cancellationToken);
+        var now = timeProvider.GetUtcNow();
+        foreach (var snapshot in snapshots)
+        {
+            snapshot.UpdateChecks(checkStatus, now);
+            if (checkStatus == GitHubCheckStatus.Failing)
+            {
+                await AddNotificationsAsync(
+                    snapshot,
+                    snapshot.TaskLinks.Select(link => link.Task),
+                    NotificationKind.PullRequestChecksFailed,
+                    task => task.AssigneeUserId,
+                    "Checks failed",
+                    "GitHub checks failed. Open the pull request to inspect the failing jobs.",
+                    webhookEvent.DeliveryId,
+                    cancellationToken);
+            }
+        }
+    }
+
+    private async Task AddLifecycleNotificationsAsync(
+        GitHubPullRequest pullRequest,
+        IReadOnlyCollection<ProjectTask> tasks,
+        GitHubWebhookEvent webhookEvent,
+        CancellationToken cancellationToken)
+    {
+        if (webhookEvent.EventName == "pull_request" &&
+            webhookEvent.Action is "opened" or "reopened" or "ready_for_review" &&
+            pullRequest.Status == GitHubPullRequestStatus.WaitingForReview)
+        {
+            await AddNotificationsAsync(
+                pullRequest,
+                tasks,
+                NotificationKind.PullRequestReviewRequested,
+                task => task.ReviewerUserId,
+                "PR ready for review",
+                "A linked pull request is ready for review on GitHub.",
                 webhookEvent.DeliveryId,
                 cancellationToken);
+        }
+        else if (webhookEvent.EventName == "pull_request_review" &&
+                 webhookEvent.Action == "submitted" &&
+                 pullRequest.Status == GitHubPullRequestStatus.ChangesRequested)
+        {
+            await AddNotificationsAsync(
+                pullRequest,
+                tasks,
+                NotificationKind.PullRequestChangesRequested,
+                task => task.AssigneeUserId,
+                "PR changes requested",
+                "A reviewer requested changes. Open the pull request for feedback.",
+                webhookEvent.DeliveryId,
+                cancellationToken);
+        }
+        else if (webhookEvent.EventName == "pull_request" &&
+                 pullRequest.Status == GitHubPullRequestStatus.Merged)
+        {
+            var recipients = tasks
+                .SelectMany(task => new[]
+                {
+                    (Task: task, UserId: task.AssigneeUserId),
+                    (Task: task, UserId: task.ReviewerUserId),
+                })
+                .Where(item => item.UserId.HasValue)
+                .DistinctBy(item => new { item.Task.Id, item.UserId })
+                .ToArray();
+            foreach (var recipient in recipients)
+            {
+                await AddNotificationAsync(
+                    pullRequest,
+                    recipient.Task,
+                    recipient.UserId!.Value,
+                    NotificationKind.PullRequestMerged,
+                    "PR merged",
+                    "A linked pull request was merged on GitHub.",
+                    webhookEvent.DeliveryId,
+                    cancellationToken);
+            }
+        }
+    }
+
+    private async Task AddNotificationsAsync(
+        GitHubPullRequest pullRequest,
+        IEnumerable<ProjectTask> tasks,
+        NotificationKind kind,
+        Func<ProjectTask, Guid?> recipientSelector,
+        string title,
+        string message,
+        string deliveryId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var task in tasks)
+        {
+            var recipientUserId = recipientSelector(task);
+            if (!recipientUserId.HasValue)
+            {
+                continue;
+            }
+
+            await AddNotificationAsync(
+                pullRequest,
+                task,
+                recipientUserId.Value,
+                kind,
+                title,
+                message,
+                deliveryId,
+                cancellationToken);
+        }
+    }
+
+    private async Task AddNotificationAsync(
+        GitHubPullRequest pullRequest,
+        ProjectTask task,
+        Guid recipientUserId,
+        NotificationKind kind,
+        string title,
+        string message,
+        string deliveryId,
+        CancellationToken cancellationToken)
+    {
+        var sourceReference = $"github:{deliveryId}:{task.Id:N}:{kind}";
+        var exists = await dbContext.Notifications
+            .IgnoreQueryFilters()
+            .AnyAsync(notification =>
+                notification.WorkspaceId == task.WorkspaceId &&
+                notification.RecipientUserId == recipientUserId &&
+                notification.SourceReference == sourceReference,
+                cancellationToken);
+        if (exists)
+        {
+            return;
+        }
+
+        dbContext.Notifications.Add(new Notification(
+            Guid.NewGuid(),
+            task.WorkspaceId,
+            recipientUserId,
+            kind,
+            $"{title}: {task.Code.Value}",
+            message,
+            task.ProjectId,
+            task.Id,
+            pullRequest.Url,
+            sourceReference));
+    }
+
+    private static void SynchronizeTaskLinks(
+        GitHubPullRequest pullRequest,
+        IReadOnlyCollection<ProjectTask> tasks)
+    {
+        var taskIds = tasks.Select(task => task.Id).ToHashSet();
+        foreach (var staleLink in pullRequest.TaskLinks
+                     .Where(link => !taskIds.Contains(link.TaskId))
+                     .ToArray())
+        {
+            pullRequest.TaskLinks.Remove(staleLink);
+        }
+
+        var existingTaskIds = pullRequest.TaskLinks.Select(link => link.TaskId).ToHashSet();
+        foreach (var task in tasks.Where(task => !existingTaskIds.Contains(task.Id)))
+        {
+            pullRequest.TaskLinks.Add(new GitHubPullRequestTask(
+                pullRequest.Id,
+                pullRequest.WorkspaceId,
+                pullRequest.ProjectId,
+                task.Id));
         }
     }
 
@@ -416,6 +736,108 @@ internal sealed partial class GitHubTaskAutomationHandler(
     private static bool GetBoolean(JsonElement parent, string propertyName) =>
         parent.TryGetProperty(propertyName, out var value) &&
         value.ValueKind is JsonValueKind.True;
+
+    private static DateTimeOffset? GetDateTimeOffset(
+        JsonElement parent,
+        string propertyName) =>
+        parent.TryGetProperty(propertyName, out var value) &&
+        value.ValueKind == JsonValueKind.String &&
+        value.TryGetDateTimeOffset(out var result)
+            ? result
+            : null;
+
+    private static string? GetRequestedReviewers(JsonElement pullRequest)
+    {
+        if (!pullRequest.TryGetProperty("requested_reviewers", out var reviewers) ||
+            reviewers.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var logins = reviewers.EnumerateArray()
+            .Select(reviewer => GetString(reviewer, "login"))
+            .Where(login => !string.IsNullOrWhiteSpace(login))
+            .Select(login => login!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (logins.Length == 0)
+        {
+            return null;
+        }
+
+        var selected = new List<string>();
+        var length = 0;
+        foreach (var login in logins)
+        {
+            var nextLength = length + (selected.Count == 0 ? 0 : 1) + login.Length;
+            if (nextLength > GitHubPullRequest.RequestedReviewersMaximumLength)
+            {
+                break;
+            }
+
+            selected.Add(login);
+            length = nextLength;
+        }
+
+        return selected.Count == 0 ? null : string.Join(',', selected);
+    }
+
+    private static GitHubPullRequestStatus ResolvePullRequestStatus(
+        string eventName,
+        string? action,
+        JsonElement pullRequest,
+        JsonElement root,
+        GitHubPullRequestStatus? currentStatus)
+    {
+        if (eventName == "pull_request_review")
+        {
+            var reviewState = TryGetObject(root, "review", out var review)
+                ? GetString(review, "state")
+                : null;
+            if (string.Equals(reviewState, "changes_requested", StringComparison.OrdinalIgnoreCase))
+            {
+                return GitHubPullRequestStatus.ChangesRequested;
+            }
+
+            if (string.Equals(reviewState, "approved", StringComparison.OrdinalIgnoreCase))
+            {
+                return GitHubPullRequestStatus.ReadyToMerge;
+            }
+
+            return action == "dismissed"
+                ? GitHubPullRequestStatus.WaitingForReview
+                : currentStatus ?? GitHubPullRequestStatus.WaitingForReview;
+        }
+
+        var draft = GetBoolean(pullRequest, "draft");
+        var merged = GetBoolean(pullRequest, "merged");
+        return action switch
+        {
+            "converted_to_draft" => GitHubPullRequestStatus.Draft,
+            "opened" or "reopened" or "ready_for_review" when draft =>
+                GitHubPullRequestStatus.Draft,
+            "opened" or "reopened" or "ready_for_review" or "synchronize" =>
+                GitHubPullRequestStatus.WaitingForReview,
+            "closed" when merged => GitHubPullRequestStatus.Merged,
+            "closed" => GitHubPullRequestStatus.Closed,
+            _ => currentStatus ?? GitHubPullRequestStatus.WaitingForReview,
+        };
+    }
+
+    private static GitHubCheckStatus ResolveCheckStatus(JsonElement checkSuite)
+    {
+        var status = GetString(checkSuite, "status");
+        if (!string.Equals(status, "completed", StringComparison.OrdinalIgnoreCase))
+        {
+            return GitHubCheckStatus.Pending;
+        }
+
+        var conclusion = GetString(checkSuite, "conclusion");
+        return conclusion is "success" or "neutral" or "skipped"
+            ? GitHubCheckStatus.Passing
+            : GitHubCheckStatus.Failing;
+    }
 
     private static string FirstLine(string? value) =>
         string.IsNullOrWhiteSpace(value)

@@ -131,6 +131,7 @@ describe('notifications', () => {
           message: 'You were assigned to “Notification task”.',
           projectId: 'project-1',
           taskId: 'task-1',
+          externalUrl: null,
           isRead: false,
           createdAtUtc: '2026-10-21T12:00:00Z',
         },
@@ -181,5 +182,58 @@ describe('notifications', () => {
       '/workspaces/workspace-1/projects/project-1/tasks?task=task-1',
     )
     expect(onUnreadCountChange).toHaveBeenCalledWith(0)
+  })
+
+  it('opens a GitHub notification at its external deep link', async () => {
+    const feed = {
+      items: [
+        {
+          id: 'notification-pr',
+          kind: 'PullRequestReviewRequested',
+          title: 'PR ready for review: TP-062',
+          message: 'A linked pull request is ready for review on GitHub.',
+          projectId: 'project-1',
+          taskId: 'task-1',
+          externalUrl: 'https://github.com/Btrung-uit/TeamPulse/pull/42',
+          isRead: true,
+          createdAtUtc: '2026-10-24T08:00:00Z',
+        },
+      ],
+      unreadCount: 0,
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(feed), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
+      ),
+    )
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const user = userEvent.setup()
+
+    render(
+      <Providers>
+        <NotificationPanel
+          isOpen
+          onClose={vi.fn()}
+          onUnreadCountChange={vi.fn()}
+        />
+      </Providers>,
+    )
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: /PR ready for review: TP-062/,
+      }),
+    )
+    expect(open).toHaveBeenCalledWith(
+      feed.items[0].externalUrl,
+      '_blank',
+      'noopener,noreferrer',
+    )
   })
 })

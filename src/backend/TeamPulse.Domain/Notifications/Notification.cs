@@ -6,6 +6,8 @@ public sealed class Notification : AuditableEntity
 {
     public const int TitleMaximumLength = 240;
     public const int MessageMaximumLength = 500;
+    public const int ExternalUrlMaximumLength = 2_048;
+    public const int SourceReferenceMaximumLength = 240;
 
     private Notification()
     {
@@ -19,7 +21,9 @@ public sealed class Notification : AuditableEntity
         string title,
         string message,
         Guid projectId,
-        Guid? taskId = null)
+        Guid? taskId = null,
+        string? externalUrl = null,
+        string? sourceReference = null)
         : base(id)
     {
         if (workspaceId == Guid.Empty)
@@ -49,6 +53,24 @@ public sealed class Notification : AuditableEntity
         Message = DomainText.Required(message, nameof(message), MessageMaximumLength);
         ProjectId = projectId;
         TaskId = taskId;
+        ExternalUrl = DomainText.Optional(
+            externalUrl,
+            nameof(externalUrl),
+            ExternalUrlMaximumLength);
+        if (ExternalUrl is not null &&
+            (!Uri.TryCreate(ExternalUrl, UriKind.Absolute, out var uri) ||
+                uri.Scheme != Uri.UriSchemeHttps ||
+                !string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new ArgumentException(
+                "Notification external URL must be an absolute GitHub HTTPS URL.",
+                nameof(externalUrl));
+        }
+
+        SourceReference = DomainText.Optional(
+            sourceReference,
+            nameof(sourceReference),
+            SourceReferenceMaximumLength);
     }
 
     public Guid WorkspaceId { get; private set; }
@@ -64,6 +86,10 @@ public sealed class Notification : AuditableEntity
     public Guid ProjectId { get; private set; }
 
     public Guid? TaskId { get; private set; }
+
+    public string? ExternalUrl { get; private set; }
+
+    public string? SourceReference { get; private set; }
 
     public DateTimeOffset? ReadAtUtc { get; private set; }
 

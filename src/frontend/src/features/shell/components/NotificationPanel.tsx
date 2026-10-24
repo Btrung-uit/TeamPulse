@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Bell, CheckCheck, ClipboardCheck, ListTodo } from 'lucide-react'
+import {
+  Bell,
+  CheckCheck,
+  ClipboardCheck,
+  GitPullRequest,
+  ListTodo,
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/Button/Button'
@@ -99,6 +105,11 @@ export function NotificationPanel({
     }
 
     onClose()
+    if (notification.externalUrl) {
+      window.open(notification.externalUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+
     const destination = notification.taskId
       ? `${projectPath(currentWorkspace.id, notification.projectId)}/tasks?task=${notification.taskId}`
       : projectPath(currentWorkspace.id, notification.projectId)
@@ -189,8 +200,9 @@ export function NotificationPanel({
         {!isLoading && !error && feed.items.length > 0 && (
           <div className="notification-panel__list">
             {feed.items.map((notification) => {
-              const Icon =
-                notification.kind === 'ReviewRequest'
+              const Icon = notification.kind.startsWith('PullRequest')
+                ? GitPullRequest
+                : notification.kind === 'ReviewRequest'
                   ? ClipboardCheck
                   : ListTodo
               return (

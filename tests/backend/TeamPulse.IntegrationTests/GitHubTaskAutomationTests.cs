@@ -166,6 +166,79 @@ public sealed class GitHubTaskAutomationTests : IClassFixture<TeamPulseApiFactor
             activity.NewValue == "NeedsChanges");
     }
 
+    [Fact]
+    public async Task WaitingRoom_ProjectsChecksAndCreatesGitHubDeepLinkNotifications()
+    {
+        await using var factory = CreateEnabledFactory();
+        using var leader = await RegisterAsync(factory, "Waiting Room Leader");
+        var setup = await CreateProjectSetupAsync(leader, "TP-604");
+
+        await SendWebhookAsync(
+            leader.Client,
+            "waiting-room-ready",
+            "pull_request",
+            PullRequestPayload("ready_for_review", "TP-604 waiting room", merged: false, draft: false));
+        await WaitForDeliveryAsync(factory, "waiting-room-ready");
+
+        var waiting = await leader.Client.GetFromJsonAsync<PullRequestFeedResponse>(
+            PullRequestsUrl(setup) + "?filter=waiting");
+        Assert.NotNull(waiting);
+        var item = Assert.Single(waiting.Items);
+        Assert.Equal("WaitingForReview", item.Status);
+        Assert.Equal("Unknown", item.CheckStatus);
+        Assert.Equal("octocat", item.AuthorLogin);
+        Assert.Equal("reviewer", Assert.Single(item.RequestedReviewers));
+        var linkedTask = Assert.Single(item.Tasks);
+        Assert.Equal("TP-604", linkedTask.Code);
+        Assert.Equal("Waiting Room Leader", linkedTask.Reviewer?.DisplayName);
+
+        var notifications = await leader.Client.GetFromJsonAsync<NotificationFeedResponse>(
+            $"/api/workspaces/{setup.WorkspaceId}/notifications?filter=reviews");
+        Assert.NotNull(notifications);
+        Assert.Contains(notifications.Items, notification =>
+            notification.Kind == "PullRequestReviewRequested" &&
+            notification.ExternalUrl == $"https://github.com/{RepositoryFullName}/pull/42");
+
+        await SendWebhookAsync(
+            leader.Client,
+            "waiting-room-checks",
+            "check_suite",
+            CheckSuitePayload("failure"));
+        await WaitForDeliveryAsync(factory, "waiting-room-checks");
+        waiting = await leader.Client.GetFromJsonAsync<PullRequestFeedResponse>(
+            PullRequestsUrl(setup) + "?filter=waiting");
+        Assert.Equal("Failing", Assert.Single(waiting!.Items).CheckStatus);
+
+        await SendWebhookAsync(
+            leader.Client,
+            "waiting-room-changes",
+            "pull_request_review",
+            PullRequestReviewPayload("TP-604 waiting room", "changes_requested"));
+        await WaitForDeliveryAsync(factory, "waiting-room-changes");
+        var changes = await leader.Client.GetFromJsonAsync<PullRequestFeedResponse>(
+            PullRequestsUrl(setup) + "?filter=changes");
+        Assert.Equal("ChangesRequested", Assert.Single(changes!.Items).Status);
+
+        await SendWebhookAsync(
+            leader.Client,
+            "waiting-room-merged",
+            "pull_request",
+            PullRequestPayload("closed", "TP-604 waiting room", merged: true, draft: false));
+        await WaitForDeliveryAsync(factory, "waiting-room-merged");
+        var merged = await leader.Client.GetFromJsonAsync<PullRequestFeedResponse>(
+            PullRequestsUrl(setup) + "?filter=merged");
+        Assert.Equal("Merged", Assert.Single(merged!.Items).Status);
+
+        notifications = await leader.Client.GetFromJsonAsync<NotificationFeedResponse>(
+            $"/api/workspaces/{setup.WorkspaceId}/notifications?filter=reviews");
+        Assert.Contains(notifications!.Items, notification =>
+            notification.Kind == "PullRequestChecksFailed");
+        Assert.Contains(notifications.Items, notification =>
+            notification.Kind == "PullRequestChangesRequested");
+        Assert.Contains(notifications.Items, notification =>
+            notification.Kind == "PullRequestMerged");
+    }
+
     private WebApplicationFactory<Program> CreateEnabledFactory() =>
         _factory.WithWebHostBuilder(builder =>
         {
@@ -372,6 +445,9 @@ public sealed class GitHubTaskAutomationTests : IClassFixture<TeamPulseApiFactor
                 title,
                 body = "Automated lifecycle integration test",
                 html_url = $"https://github.com/{RepositoryFullName}/pull/42",
+                created_at = "2026-10-20T08:00:00Z",
+                user = new { login = "octocat" },
+                requested_reviewers = new[] { new { login = "reviewer" } },
                 merged,
                 draft,
             },
@@ -392,6 +468,19 @@ public sealed class GitHubTaskAutomationTests : IClassFixture<TeamPulseApiFactor
             review = new { state },
         });
 
+    private static byte[] CheckSuitePayload(string conclusion) =>
+        JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            action = "completed",
+            repository = Repository(),
+            check_suite = new
+            {
+                status = "completed",
+                conclusion,
+                pull_requests = new[] { new { number = 42 } },
+            },
+        });
+
     private static object Repository() => new
     {
         id = 123456789,
@@ -406,6 +495,10 @@ public sealed class GitHubTaskAutomationTests : IClassFixture<TeamPulseApiFactor
 
     private static string TasksUrl(Guid workspaceId, Guid projectId) =>
         $"/api/workspaces/{workspaceId}/projects/{projectId}/tasks";
+
+    private static string PullRequestsUrl(ProjectSetup setup) =>
+        $"/api/workspaces/{setup.WorkspaceId}/projects/{setup.ProjectId}" +
+        "/integrations/github/pull-requests";
 
     private sealed record ProjectSetup(
         Guid WorkspaceId,
@@ -424,4 +517,23 @@ public sealed class GitHubTaskAutomationTests : IClassFixture<TeamPulseApiFactor
         Guid Id,
         string Status,
         string RowVersion);
+    private sealed record PullRequestFeedResponse(
+        IReadOnlyList<PullRequestResponse> Items,
+        int WaitingCount,
+        int ChangesCount,
+        int MergedCount);
+    private sealed record PullRequestResponse(
+        string Status,
+        string CheckStatus,
+        string? AuthorLogin,
+        IReadOnlyList<string> RequestedReviewers,
+        IReadOnlyList<PullRequestTaskResponse> Tasks);
+    private sealed record PullRequestTaskResponse(
+        string Code,
+        PullRequestReviewerResponse? Reviewer);
+    private sealed record PullRequestReviewerResponse(string DisplayName);
+    private sealed record NotificationFeedResponse(
+        IReadOnlyList<NotificationResponse> Items,
+        int UnreadCount);
+    private sealed record NotificationResponse(string Kind, string? ExternalUrl);
 }

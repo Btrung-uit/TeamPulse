@@ -341,7 +341,7 @@ Workflow chỉ có quyền đọc source code và không sử dụng application
 
 ## Trạng thái dự án
 
-MVP portfolio đã có auth, multi-workspace switch/create, workspace-scoped search, in-app assignment/review notification, project/task/planning, transactional Excel onboarding, evidence/review, dashboard, Resource Hub, Presentation Mode, accessibility states, security hardening, E2E core flow, Docker production-like và bản public deployment trên Render + Azure SQL. Repository webhook đã có signature verification, deduplication, delivery audit, background processing và commit/PR evidence-status automation; PR Waiting Room, notification nâng cao và realtime delivery vẫn thuộc Phase 2–3.
+MVP portfolio đã có auth, multi-workspace switch/create, workspace-scoped search, in-app assignment/review notification, project/task/planning, transactional Excel onboarding, evidence/review, dashboard, Resource Hub, Presentation Mode, accessibility states, security hardening, E2E core flow, Docker production-like và bản public deployment trên Render + Azure SQL. Repository webhook đã có signature verification, deduplication, delivery audit, background processing, commit/PR automation và PR Waiting Room với notification deep-link sang GitHub; realtime SignalR vẫn thuộc Phase 2–3.
 
 ## Project Brain
 
@@ -378,7 +378,7 @@ Task → Evidence → Review → Contribution Report → Presentation
 - Transactional Excel import with mapping and preview, plus `.xlsx` export.
 - Resource links for Google Docs, Drive, Canva, GitHub, and deployed demos.
 - Presentation Mode for project demonstrations and assessment.
-- Secure repository webhook intake with evidence-driven task transitions; PR Waiting Room remains planned.
+- Secure repository webhook intake, evidence-driven task transitions, and a PR Waiting Room with GitHub deep links.
 - Monitoring-first mobile experience for Home, My Tasks, Inbox, PRs, and Resources.
 
 ## Planned stack
@@ -488,7 +488,7 @@ The workflow has read-only source access and does not consume application secret
 
 ## Current status
 
-The portfolio MVP includes authentication, multi-workspace switching and creation, workspace-scoped search, in-app assignment/review notifications, project/task planning, transactional Excel onboarding, evidence and review workflows, dashboards, Resource Hub, Presentation Mode, accessibility states, security hardening, an E2E core flow, a production-like Docker stack, and a public Render + Azure SQL deployment. The repository webhook verifies signatures, deduplicates deliveries, stores an audit trail, processes deliveries asynchronously, and automates commit/PR evidence and task status; PR Waiting Room, richer notifications, and realtime delivery remain Phase 2–3 work.
+The portfolio MVP includes authentication, multi-workspace switching and creation, workspace-scoped search, in-app assignment/review notifications, project/task planning, transactional Excel onboarding, evidence and review workflows, dashboards, Resource Hub, Presentation Mode, accessibility states, security hardening, an E2E core flow, a production-like Docker stack, and a public Render + Azure SQL deployment. The repository webhook verifies signatures, deduplicates deliveries, stores an audit trail, processes deliveries asynchronously, automates commit/PR evidence and task status, and projects a polling-based PR Waiting Room with GitHub deep-link notifications; realtime SignalR remains later work.
 
 ## Documentation
 

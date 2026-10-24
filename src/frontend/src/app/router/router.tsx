@@ -8,6 +8,7 @@ import { PresentationRoute } from '@/app/router/PresentationRoute'
 import { ProtectedRoute, PublicOnlyRoute } from '@/features/auth/ProtectedRoute'
 import { AuthPage } from '@/features/auth/pages/AuthPage'
 import { ProjectListPage } from '@/features/projects/pages/ProjectListPage'
+import { PullRequestWaitingRoomPage } from '@/features/pullRequests/pages/PullRequestWaitingRoomPage'
 import { ResourceHubPage } from '@/features/resources/pages/ResourceHubPage'
 import {
   ProjectProviderRoute,
@@ -15,7 +16,6 @@ import {
 } from '@/features/projects/ProjectRoutes'
 import { NotFoundPage } from '@/features/shell/pages/NotFoundPage'
 import { MobileMorePage } from '@/features/shell/pages/MobileMorePage'
-import { PlaceholderPage } from '@/features/shell/pages/PlaceholderPage'
 import { NotificationsPage } from '@/features/shell/pages/NotificationsPage'
 import { TaskBoardPage } from '@/features/tasks/pages/TaskBoardPage'
 import { MyTasksPage } from '@/features/tasks/pages/MyTasksPage'
@@ -104,13 +104,7 @@ export const router = createBrowserRouter([
                           },
                           {
                             path: 'engineering/pull-requests',
-                            element: (
-                              <PlaceholderPage
-                                eyebrow="Engineering"
-                                title="PR waiting room"
-                                description="Pull requests awaiting review will be connected during the GitHub integration phase."
-                              />
-                            ),
+                            element: <PullRequestWaitingRoomPage />,
                           },
                           {
                             path: 'resources',

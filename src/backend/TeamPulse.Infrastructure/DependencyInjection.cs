@@ -126,6 +126,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IGitHubWebhookReceiver, GitHubWebhookReceiver>();
         services.AddScoped<IGitHubWebhookEventHandler, GitHubTaskAutomationHandler>();
+        services.AddScoped<IGitHubPullRequestService, GitHubPullRequestService>();
         services.AddHostedService<GitHubWebhookWorker>();
 
         services

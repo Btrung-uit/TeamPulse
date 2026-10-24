@@ -27,7 +27,14 @@ export interface WorkspaceSearchResults {
 }
 
 export type NotificationKind =
-  'Assignment' | 'ReviewRequest' | 'ReviewAccepted' | 'ChangesRequested'
+  | 'Assignment'
+  | 'ReviewRequest'
+  | 'ReviewAccepted'
+  | 'ChangesRequested'
+  | 'PullRequestReviewRequested'
+  | 'PullRequestChangesRequested'
+  | 'PullRequestChecksFailed'
+  | 'PullRequestMerged'
 
 export type NotificationFilter = 'all' | 'unread' | 'reviews'
 
@@ -38,6 +45,7 @@ export interface NotificationItem {
   message: string
   projectId: string
   taskId: string | null
+  externalUrl: string | null
   isRead: boolean
   createdAtUtc: string
 }

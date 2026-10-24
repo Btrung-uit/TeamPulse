@@ -66,6 +66,7 @@ public static class NotificationEndpoints
                 notification.Message,
                 notification.ProjectId,
                 notification.TaskId,
+                notification.ExternalUrl,
                 notification.IsRead,
                 notification.CreatedAtUtc,
             }),

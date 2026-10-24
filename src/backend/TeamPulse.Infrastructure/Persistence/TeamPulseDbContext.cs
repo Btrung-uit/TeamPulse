@@ -54,6 +54,10 @@ public sealed class TeamPulseDbContext(
 
     public DbSet<GitHubWebhookDelivery> GitHubWebhookDeliveries => Set<GitHubWebhookDelivery>();
 
+    public DbSet<GitHubPullRequest> GitHubPullRequests => Set<GitHubPullRequest>();
+
+    public DbSet<GitHubPullRequestTask> GitHubPullRequestTasks => Set<GitHubPullRequestTask>();
+
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -125,6 +129,16 @@ public sealed class TeamPulseDbContext(
             .HasQueryFilter(notification =>
                 _workspaceScope.WorkspaceId.HasValue &&
                 notification.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<GitHubPullRequest>()
+            .HasQueryFilter(pullRequest =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                pullRequest.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<GitHubPullRequestTask>()
+            .HasQueryFilter(link =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                link.WorkspaceId == _workspaceScope.WorkspaceId.Value);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

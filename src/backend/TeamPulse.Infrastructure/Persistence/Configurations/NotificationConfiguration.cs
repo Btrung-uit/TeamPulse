@@ -22,6 +22,10 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         builder.Property(notification => notification.Message)
             .HasMaxLength(Notification.MessageMaximumLength)
             .IsRequired();
+        builder.Property(notification => notification.ExternalUrl)
+            .HasMaxLength(Notification.ExternalUrlMaximumLength);
+        builder.Property(notification => notification.SourceReference)
+            .HasMaxLength(Notification.SourceReferenceMaximumLength);
         builder.Ignore(notification => notification.IsRead);
 
         builder.HasOne<WorkspaceMember>()
@@ -41,6 +45,14 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
             notification.ReadAtUtc,
             notification.CreatedAtUtc,
         });
+        builder.HasIndex(notification => new
+        {
+            notification.WorkspaceId,
+            notification.RecipientUserId,
+            notification.SourceReference,
+        })
+            .IsUnique()
+            .HasFilter("[SourceReference] IS NOT NULL");
         builder.ConfigureAuditProperties();
     }
 }

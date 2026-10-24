@@ -34,7 +34,11 @@ internal sealed class NotificationService(
                 notification =>
                     notification.Kind == NotificationKind.ReviewRequest ||
                     notification.Kind == NotificationKind.ReviewAccepted ||
-                    notification.Kind == NotificationKind.ChangesRequested),
+                    notification.Kind == NotificationKind.ChangesRequested ||
+                    notification.Kind == NotificationKind.PullRequestReviewRequested ||
+                    notification.Kind == NotificationKind.PullRequestChangesRequested ||
+                    notification.Kind == NotificationKind.PullRequestChecksFailed ||
+                    notification.Kind == NotificationKind.PullRequestMerged),
             _ => recipientNotifications,
         };
 
@@ -48,6 +52,7 @@ internal sealed class NotificationService(
                 notification.Message,
                 notification.ProjectId,
                 notification.TaskId,
+                notification.ExternalUrl,
                 notification.ReadAtUtc != null,
                 notification.CreatedAtUtc))
             .ToListAsync(cancellationToken);

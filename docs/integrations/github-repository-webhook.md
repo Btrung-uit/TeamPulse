@@ -21,6 +21,7 @@ Configure the repository webhook for these event groups:
 - Pushes.
 - Pull requests.
 - Pull request reviews.
+- Check suites.
 
 GitHub's automatic `ping` event is authenticated and audited as `Ignored`. Unsupported events/actions are also audited without entering background processing.
 
@@ -57,7 +58,7 @@ Open **Repository → Settings → Webhooks → Add webhook** and configure:
 | Content type | `application/json` |
 | Secret | The exact server-side secret configured above |
 | SSL verification | Enabled |
-| Events | Pushes, Pull requests, Pull request reviews |
+| Events | Pushes, Pull requests, Pull request reviews, Check suites |
 | Active | Enabled |
 
 Do not put the secret in frontend environment variables, source control, screenshots, issue descriptions, or logs.
@@ -97,6 +98,14 @@ Reference a task code such as `TP-123` in a commit message or PR title/body.
 Commit SHA and PR number provide idempotent evidence identities. Malformed task codes are ignored. Automation does not overwrite `Blocked` or already `Done` tasks.
 
 Automated evidence and activities are attributed to `GitHubAutomation`, not to a workspace member. Each automated activity stores the source delivery ID for traceability. Leaders can still change status manually; that override creates the normal user-attributed task activity and remains distinguishable from automation.
+
+## PR Waiting Room and notifications
+
+TP-062 stores one PR projection per mapped project and repository. The Waiting Room polls its API every 30 seconds and supports `All`, `Waiting`, `Changes`, and `Merged` views. Each card shows the linked TeamPulse tasks, TeamPulse reviewer (falling back to requested GitHub reviewers), check-suite summary, PR age, the next action, and an `Open on GitHub` link.
+
+Repository webhooks can deliver completed `check_suite` events. TeamPulse uses their aggregate conclusion as `Passing` or `Failing`; before a suite is reported, the UI honestly shows `Checks not reported`. No GitHub API token is required for this projection.
+
+In-app notifications are created only for actionable PR lifecycle events: ready for review, changes requested, failing checks, and merged. They target the linked task reviewer or assignee and open the exact PR on GitHub. A stable source reference prevents the same accepted delivery from creating duplicate notifications. Delivery remains polling-based; SignalR is intentionally deferred until this flow is proven in use.
 
 The current public demo runs as one API instance. Before scaling to multiple API instances, replace the read-then-lease step with an atomic database claim so two workers cannot select the same pending delivery. Define a payload retention policy before enabling the integration for high-volume repositories.
 

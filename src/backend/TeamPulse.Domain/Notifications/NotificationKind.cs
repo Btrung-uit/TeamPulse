@@ -6,4 +6,8 @@ public enum NotificationKind
     ReviewRequest,
     ReviewAccepted,
     ChangesRequested,
+    PullRequestReviewRequested,
+    PullRequestChangesRequested,
+    PullRequestChecksFailed,
+    PullRequestMerged,
 }

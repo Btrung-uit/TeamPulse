@@ -33,6 +33,10 @@ internal sealed class GitHubWebhookReceiver(
                 "edited",
                 "dismissed",
             },
+            ["check_suite"] = new(StringComparer.Ordinal)
+            {
+                "completed",
+            },
         };
 
     private readonly GitHubWebhookOptions _options = options.Value;

@@ -329,6 +329,7 @@ Một task chỉ được đánh dấu Done khi:
 
 ## TP-062 — PR Waiting Room và notification nâng cao
 
+- **Trạng thái:** Done — webhook projection, polling UI và GitHub deep-link notifications.
 - **Ưu tiên:** P1 · **Ước lượng:** 1.25 ngày · **Phụ thuộc:** TP-061
 - **Thực hiện:** Danh sách PR waiting/changes/merged, task liên quan, reviewer, checks, age; inbox/deep link sang GitHub; cân nhắc SignalR sau khi polling flow ổn định.
 - **Acceptance criteria:** Reviewer nhìn được action cần làm và mở đúng PR; code review/merge vẫn diễn ra trên GitHub; không biến TeamPulse thành GitHub clone.
