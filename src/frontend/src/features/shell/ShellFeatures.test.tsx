@@ -5,8 +5,14 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { AuthContext, type AuthContextValue } from '@/features/auth/AuthContext'
+import { ThemeContext } from '@/app/providers/themeContext'
+import {
+  ProjectContext,
+  type ProjectContextValue,
+} from '@/features/projects/ProjectContext'
 import { NotificationPanel } from '@/features/shell/components/NotificationPanel'
 import { WorkspaceSearchDialog } from '@/features/shell/components/WorkspaceSearchDialog'
+import { MobileMorePage } from '@/features/shell/pages/MobileMorePage'
 import {
   WorkspaceContext,
   type WorkspaceContextValue,
@@ -47,6 +53,37 @@ const workspaceContext: WorkspaceContextValue = {
   reload: vi.fn(),
 }
 
+const projectContext: ProjectContextValue = {
+  status: 'ready',
+  projects: [
+    {
+      id: 'project-1',
+      workspaceId: 'workspace-1',
+      name: 'TeamPulse MVP',
+      description: null,
+      isArchived: false,
+      createdAtUtc: '2026-10-01T00:00:00Z',
+      updatedAtUtc: '2026-10-01T00:00:00Z',
+      archivedAtUtc: null,
+    },
+  ],
+  currentProject: {
+    id: 'project-1',
+    workspaceId: 'workspace-1',
+    name: 'TeamPulse MVP',
+    description: null,
+    isArchived: false,
+    createdAtUtc: '2026-10-01T00:00:00Z',
+    updatedAtUtc: '2026-10-01T00:00:00Z',
+    archivedAtUtc: null,
+  },
+  error: null,
+  createProject: vi.fn(),
+  updateProject: vi.fn(),
+  archiveProject: vi.fn(),
+  reload: vi.fn(),
+}
+
 function LocationProbe() {
   const location = useLocation()
   return (
@@ -72,6 +109,37 @@ function Providers({ children }: { children: ReactNode }) {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+})
+
+describe('mobile more navigation', () => {
+  it('keeps project planning and workspace administration reachable', () => {
+    render(
+      <MemoryRouter>
+        <ThemeContext.Provider value={{ theme: 'light', toggleTheme: vi.fn() }}>
+          <AuthContext.Provider value={authContext}>
+            <WorkspaceContext.Provider value={workspaceContext}>
+              <ProjectContext.Provider value={projectContext}>
+                <MobileMorePage />
+              </ProjectContext.Provider>
+            </WorkspaceContext.Provider>
+          </AuthContext.Provider>
+        </ThemeContext.Provider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('link', { name: /Projects/ })).toHaveAttribute(
+      'href',
+      '/workspaces/workspace-1/projects',
+    )
+    expect(screen.getByRole('link', { name: /Members/ })).toHaveAttribute(
+      'href',
+      '/workspaces/workspace-1/members',
+    )
+    expect(screen.getByRole('link', { name: /Task board/ })).toHaveAttribute(
+      'href',
+      '/workspaces/workspace-1/projects/project-1/tasks?attention=true',
+    )
+  })
 })
 
 describe('workspace search', () => {

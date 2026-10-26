@@ -1,11 +1,14 @@
 import {
   FolderOpen,
   GitPullRequest,
+  LayoutDashboard,
+  ListChecks,
   LogOut,
   Moon,
   Presentation,
   Sun,
   UserRound,
+  Users,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -20,17 +23,15 @@ export function MobileMorePage() {
   const { user, logout } = useAuth()
   const { currentWorkspace } = useWorkspace()
   const { currentProject } = useProject()
+  const workspaceBase = `/workspaces/${currentWorkspace!.id}`
   const projectBase = `/workspaces/${currentWorkspace!.id}/projects/${currentProject!.id}`
   const nextTheme = theme === 'dark' ? 'light' : 'dark'
 
   return (
     <div className="mobile-more-page">
       <header>
-        <p className="eyebrow">Mobile monitoring</p>
         <h1>More</h1>
-        <p>
-          Open secondary project views without exposing planning or admin tools.
-        </p>
+        <p>Open planning, workspace and project views from your phone.</p>
       </header>
 
       <section className="mobile-more-profile" aria-label="Signed-in profile">
@@ -44,6 +45,27 @@ export function MobileMorePage() {
       </section>
 
       <nav className="mobile-more-links" aria-label="More project destinations">
+        <Link to={`${workspaceBase}/projects`}>
+          <LayoutDashboard aria-hidden="true" size={19} />
+          <span>
+            <strong>Projects</strong>
+            <small>Switch projects or manage the portfolio</small>
+          </span>
+        </Link>
+        <Link to={`${workspaceBase}/members`}>
+          <Users aria-hidden="true" size={19} />
+          <span>
+            <strong>Members</strong>
+            <small>See the team and workspace roles</small>
+          </span>
+        </Link>
+        <Link to={`${projectBase}/tasks?attention=true`}>
+          <ListChecks aria-hidden="true" size={19} />
+          <span>
+            <strong>Task board</strong>
+            <small>Start with work that needs attention</small>
+          </span>
+        </Link>
         <Link to={`${projectBase}/engineering/pull-requests`}>
           <GitPullRequest aria-hidden="true" size={19} />
           <span>
