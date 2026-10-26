@@ -137,6 +137,22 @@ test('leader import → member evidence → leader review → presentation', asy
     await expect(page.getByText('2 tasks imported.')).toBeVisible()
   })
 
+  await test.step('Mobile keeps planning reachable and filters progressive', async () => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await activate(page.getByRole('link', { name: 'More', exact: true }))
+    await expect(page.getByRole('link', { name: /Projects/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Members/ })).toBeVisible()
+    await activate(page.getByRole('link', { name: /Task board/ }))
+    await expect(
+      page.getByRole('button', { name: 'Needs attention' }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByLabel('Priority')).toBeHidden()
+    await activate(page.getByRole('button', { name: 'Filters', exact: true }))
+    await expect(page.getByLabel('Priority')).toBeVisible()
+    await expectAccessible(page, 'mobile task attention view')
+    await page.setViewportSize({ width: 1280, height: 720 })
+  })
+
   await test.step('Leader keeps a second session open for live updates', async () => {
     leaderObserverContext = await browser.newContext()
     leaderObserverPage = await leaderObserverContext.newPage()
@@ -249,4 +265,35 @@ test('leader import → member evidence → leader review → presentation', asy
       Math.abs((toolbarTopAfterScroll ?? 0) - (toolbarTop ?? 0)),
     ).toBeLessThanOrEqual(1)
   })
+})
+
+test('new member keeps an honest waiting state after reload', async ({
+  page,
+  request,
+}) => {
+  const email = `waiting-${Date.now()}@example.com`
+  await register(request, email, 'Waiting Member')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/login')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
+  await activate(page.getByRole('button', { name: 'Sign in' }))
+  await expect(
+    page.getByRole('heading', { name: 'Create your first workspace' }),
+  ).toBeVisible()
+
+  await activate(
+    page.getByRole('button', { name: 'Join an existing workspace' }),
+  )
+  await activate(page.getByRole('button', { name: "I've contacted my Leader" }))
+  await expect(
+    page.getByRole('heading', { name: 'Waiting for workspace access' }),
+  ).toBeVisible()
+  await expect(page.getByText(/TeamPulse has not sent a request/)).toBeVisible()
+
+  await page.reload()
+  await expect(
+    page.getByRole('heading', { name: 'Waiting for workspace access' }),
+  ).toBeVisible()
+  await expectAccessible(page, 'mobile workspace waiting state')
 })
