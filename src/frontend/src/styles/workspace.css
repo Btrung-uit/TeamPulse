@@ -191,6 +191,24 @@
   background: var(--color-surface-muted);
 }
 
+.workspace-onboarding__waiting {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-2) 0 var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.workspace-onboarding__waiting p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-lg);
+}
+
+.workspace-onboarding__waiting strong {
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+}
+
 .workspace-members-page {
   display: grid;
   gap: var(--space-8);

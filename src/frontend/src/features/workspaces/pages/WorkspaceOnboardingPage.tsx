@@ -18,11 +18,30 @@ import { WorkspaceApiError } from '@/features/workspaces/workspaceApi'
 
 const workspaceNameMaximumLength = 160
 
+function waitingStorageKey(email?: string) {
+  return email
+    ? `teampulse-workspace-waiting:${email.trim().toLowerCase()}`
+    : null
+}
+
+function hasWaitingState(email?: string) {
+  const key = waitingStorageKey(email)
+  if (!key) return false
+  try {
+    return window.localStorage.getItem(key) === 'true'
+  } catch {
+    return false
+  }
+}
+
 export function WorkspaceOnboardingPage() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { createWorkspace, reload } = useWorkspace()
-  const [mode, setMode] = useState<'create' | 'join'>('create')
+  const [mode, setMode] = useState<'create' | 'join'>(() =>
+    hasWaitingState(user?.email) ? 'join' : 'create',
+  )
+  const [isWaiting, setIsWaiting] = useState(() => hasWaitingState(user?.email))
   const [name, setName] = useState('')
   const [fieldError, setFieldError] = useState<string | undefined>()
   const [formError, setFormError] = useState<string | null>(null)
@@ -56,6 +75,32 @@ export function WorkspaceOnboardingPage() {
     } finally {
       setIsChecking(false)
     }
+  }
+
+  function startWaiting() {
+    const key = waitingStorageKey(user?.email)
+    if (key) {
+      try {
+        window.localStorage.setItem(key, 'true')
+      } catch {
+        // The UI state still works for this session when storage is unavailable.
+      }
+    }
+    setIsWaiting(true)
+    setJoinMessage(null)
+  }
+
+  function stopWaiting() {
+    const key = waitingStorageKey(user?.email)
+    if (key) {
+      try {
+        window.localStorage.removeItem(key)
+      } catch {
+        // Keep the joining steps usable even when storage is unavailable.
+      }
+    }
+    setIsWaiting(false)
+    setJoinMessage(null)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -124,16 +169,19 @@ export function WorkspaceOnboardingPage() {
         <div className="workspace-onboarding__icon" aria-hidden="true">
           <UsersRound size={28} />
         </div>
-        <p className="eyebrow">Your shared space</p>
         <h1>
           {mode === 'create'
             ? 'Create your first workspace'
-            : 'Join an existing workspace'}
+            : isWaiting
+              ? 'Waiting for workspace access'
+              : 'Join an existing workspace'}
         </h1>
         <p className="workspace-onboarding__intro">
           {mode === 'create'
             ? `Welcome, ${user?.displayName}. Give your team a clear home. You can add registered members and projects next.`
-            : 'A workspace Leader must add your registered email before you can enter the team space.'}
+            : isWaiting
+              ? 'Your Leader still needs to add your registered email from the Members page.'
+              : 'A workspace Leader must add your registered email before you can enter the team space.'}
         </p>
 
         {mode === 'create' ? (
@@ -181,46 +229,73 @@ export function WorkspaceOnboardingPage() {
           </>
         ) : (
           <div className="workspace-onboarding__join">
-            <div className="workspace-onboarding__email">
-              <span>Your registered email</span>
-              <strong>{user?.email}</strong>
-              <Button
-                variant="secondary"
-                size="sm"
-                leadingIcon={<Copy size={16} />}
-                onClick={() => void copyEmail()}
-              >
-                {copied ? 'Copied' : 'Copy email'}
-              </Button>
-            </div>
-            <ol>
-              <li>Send this email to your workspace Leader.</li>
-              <li>Ask them to add you from the Members page.</li>
-              <li>Return here and check your access.</li>
-            </ol>
+            {isWaiting ? (
+              <div className="workspace-onboarding__waiting" role="status">
+                <p>
+                  TeamPulse has not sent a request. Your Leader still needs this
+                  exact email:
+                </p>
+                <strong>{user?.email}</strong>
+                <p>
+                  You can close this page and return later. This waiting state
+                  stays with this account on this device.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="workspace-onboarding__email">
+                  <span>Your registered email</span>
+                  <strong>{user?.email}</strong>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leadingIcon={<Copy size={16} />}
+                    onClick={() => void copyEmail()}
+                  >
+                    {copied ? 'Copied' : 'Copy email'}
+                  </Button>
+                </div>
+                <ol>
+                  <li>Send this email to your workspace Leader.</li>
+                  <li>Ask them to add you from the Members page.</li>
+                  <li>Return here and confirm that you are waiting.</li>
+                </ol>
+                <Button size="lg" onClick={startWaiting}>
+                  I've contacted my Leader
+                </Button>
+              </>
+            )}
             {joinMessage && (
               <p className="workspace-onboarding__join-message" role="status">
                 {joinMessage}
               </p>
             )}
-            <Button
-              size="lg"
-              isLoading={isChecking}
-              loadingLabel="Checking workspace access"
-              leadingIcon={<RefreshCw size={17} />}
-              onClick={() => void checkWorkspaceAccess()}
-            >
-              Check workspace access
-            </Button>
+            {isWaiting && (
+              <Button
+                variant="secondary"
+                size="lg"
+                isLoading={isChecking}
+                loadingLabel="Checking workspace access"
+                leadingIcon={<RefreshCw size={17} />}
+                onClick={() => void checkWorkspaceAccess()}
+              >
+                Check workspace access
+              </Button>
+            )}
             <Button
               variant="ghost"
               leadingIcon={<ArrowLeft size={17} />}
               onClick={() => {
-                setMode('create')
-                setJoinMessage(null)
+                if (isWaiting) stopWaiting()
+                else {
+                  setMode('create')
+                  setJoinMessage(null)
+                }
               }}
             >
-              Create a workspace instead
+              {isWaiting
+                ? 'Back to joining steps'
+                : 'Create a workspace instead'}
             </Button>
           </div>
         )}
@@ -228,7 +303,9 @@ export function WorkspaceOnboardingPage() {
         <p className="workspace-onboarding__note">
           {mode === 'create'
             ? 'Project details and integrations are intentionally configured later.'
-            : 'Workspace access is controlled by your team Leader.'}
+            : isWaiting
+              ? 'Workspace access is controlled by your team Leader; checking does not notify them.'
+              : 'Workspace access is controlled by your team Leader.'}
         </p>
       </section>
     </main>

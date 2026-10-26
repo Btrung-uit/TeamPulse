@@ -28,6 +28,7 @@ const authenticatedUser: AuthContextValue = {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  window.localStorage.clear()
 })
 
 function workspaceContext(
@@ -125,12 +126,73 @@ describe('workspace onboarding flow', () => {
 
     expect(screen.getByText('leader@example.com')).toBeInTheDocument()
     await user.click(
+      screen.getByRole('button', { name: "I've contacted my Leader" }),
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Waiting for workspace access' }),
+    ).toBeInTheDocument()
+    await user.click(
       screen.getByRole('button', { name: 'Check workspace access' }),
     )
     expect(reload).toHaveBeenCalledOnce()
     expect(
       await screen.findByText(/No workspace access was found yet/),
     ).toBeInTheDocument()
+  })
+
+  it('restores the waiting state for the signed-in account', () => {
+    window.localStorage.setItem(
+      'teampulse-workspace-waiting:leader@example.com',
+      'true',
+    )
+
+    render(
+      <AuthContext.Provider value={authenticatedUser}>
+        <WorkspaceContext.Provider value={workspaceContext()}>
+          <MemoryRouter>
+            <WorkspaceOnboardingPage />
+          </MemoryRouter>
+        </WorkspaceContext.Provider>
+      </AuthContext.Provider>,
+    )
+
+    expect(
+      screen.getByRole('heading', { name: 'Waiting for workspace access' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/TeamPulse has not sent a request/),
+    ).toBeInTheDocument()
+  })
+
+  it('lets the user leave the waiting state and review joining steps', async () => {
+    window.localStorage.setItem(
+      'teampulse-workspace-waiting:leader@example.com',
+      'true',
+    )
+    const user = userEvent.setup()
+
+    render(
+      <AuthContext.Provider value={authenticatedUser}>
+        <WorkspaceContext.Provider value={workspaceContext()}>
+          <MemoryRouter>
+            <WorkspaceOnboardingPage />
+          </MemoryRouter>
+        </WorkspaceContext.Provider>
+      </AuthContext.Provider>,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Back to joining steps' }),
+    )
+
+    expect(
+      screen.getByRole('heading', { name: 'Join an existing workspace' }),
+    ).toBeInTheDocument()
+    expect(
+      window.localStorage.getItem(
+        'teampulse-workspace-waiting:leader@example.com',
+      ),
+    ).toBeNull()
   })
 
   it('lets a Leader add an existing account from the Members page', async () => {
