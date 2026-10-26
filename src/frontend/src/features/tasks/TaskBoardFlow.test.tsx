@@ -203,6 +203,18 @@ function optionsResponse(path: string) {
   return null
 }
 
+function stubBoardTasks(items: TaskSummary[]) {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const path = String(input)
+    const optionResponse = optionsResponse(path)
+    if (optionResponse) return optionResponse
+    if (path.includes('/tasks?')) return jsonResponse(taskPage(items))
+    throw new Error(`Unexpected request: ${path}`)
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
 afterEach(() => {
   vi.unstubAllGlobals()
 })
@@ -242,6 +254,7 @@ describe('task board flow', () => {
       }),
     )
 
+    await user.click(screen.getByRole('button', { name: 'Filters' }))
     await user.selectOptions(screen.getByLabelText('Priority'), 'High')
 
     await waitFor(() => {
@@ -255,6 +268,64 @@ describe('task board flow', () => {
         expect.any(Object),
       )
     })
+  })
+
+  it('discloses secondary filters only when requested or already active', async () => {
+    stubBoardTasks([task])
+    const user = userEvent.setup()
+
+    const view = renderBoard()
+
+    expect(await screen.findByText('Build task board')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Priority')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Filters' }))
+    expect(screen.getByLabelText('Priority')).toBeInTheDocument()
+
+    view.unmount()
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?priority=High',
+    )
+    expect(await screen.findByLabelText('Priority')).toHaveValue('High')
+    expect(
+      screen.getByRole('button', { name: 'Filters (1)' }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders needs-attention work as a compact list instead of seven columns', async () => {
+    const blockedTask = { ...task, status: 'Blocked' as const }
+    const normalTask = {
+      ...task,
+      id: 'task-2',
+      code: 'TP-024',
+      title: 'Normal queued task',
+      status: 'Todo' as const,
+      dueOn: null,
+    }
+    stubBoardTasks([blockedTask, normalTask])
+
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?attention=true',
+    )
+
+    const attentionList = await screen.findByRole('region', {
+      name: 'Tasks needing attention',
+    })
+    expect(
+      within(attentionList).getByText('Build task board'),
+    ).toBeInTheDocument()
+    expect(
+      within(attentionList).queryByText('Normal queued task'),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Kanban task board')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'My tasks' })).toHaveAttribute(
+      'href',
+      '/workspaces/workspace-1/projects/project-1/my-tasks',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Needs attention' }),
+    ).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('exports the current project filters and offers a leader template', async () => {

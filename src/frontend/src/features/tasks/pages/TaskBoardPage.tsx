@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   RefreshCw,
+  SlidersHorizontal,
   Upload,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -117,6 +118,16 @@ export function TaskBoardPage() {
     }),
     [searchParams],
   )
+  const advancedFilterCount = [
+    filters.status,
+    filters.priority,
+    filters.assigneeUserId,
+    filters.sprintId,
+    sort !== 'due-asc' ? sort : undefined,
+  ].filter(Boolean).length
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(
+    advancedFilterCount > 0,
+  )
   const tasksQuery = useTasks(workspaceId, projectId, filters)
   const options = useTaskOptions(workspaceId, projectId)
   const tasks = useMemo(() => {
@@ -220,6 +231,19 @@ export function TaskBoardPage() {
     })
   }
 
+  function setBoardMode(mode: 'attention' | 'workflow') {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current)
+        next.delete('view')
+        if (mode === 'attention') next.set('attention', 'true')
+        else next.delete('attention')
+        return next
+      },
+      { replace: true },
+    )
+  }
+
   function selectTask(taskId?: string) {
     setSearchParams((current) => {
       const next = new URLSearchParams(current)
@@ -232,13 +256,37 @@ export function TaskBoardPage() {
   const memberOptions = options.members.data ?? []
   const sprintOptions = options.sprints.data ?? []
 
+  function renderTaskCard(task: (typeof tasks)[number]) {
+    const assignee = task.assignee?.displayName ?? 'Unassigned'
+    return (
+      <TaskCard
+        key={task.id}
+        code={task.code}
+        title={task.title}
+        status={statusForCard[task.status]}
+        priority={priorityForCard[task.priority]}
+        assignee={{
+          name: assignee,
+          initials: task.assignee ? memberInitials(assignee) : '—',
+        }}
+        dueDate={dueLabel(task.dueOn)}
+        overdue={isOverdue(task)}
+        blocked={task.status === 'Blocked'}
+        selected={selectedTaskId === task.id}
+        onClick={() => selectTask(task.id)}
+      />
+    )
+  }
+
   return (
     <div className="task-board-page">
       <header className="task-board-header">
         <div>
-          <p className="eyebrow">{currentProject!.name}</p>
           <h1>Task board</h1>
-          <p>Plan the workflow, spot bottlenecks and keep ownership visible.</p>
+          <p>
+            {currentProject!.name} · Plan the workflow, spot bottlenecks and
+            keep ownership visible.
+          </p>
         </div>
         <div className="task-board-header__actions">
           {canManage && (
@@ -276,6 +324,29 @@ export function TaskBoardPage() {
         </div>
       </header>
 
+      <nav className="task-view-switcher" aria-label="Task board views">
+        <Link
+          className="ui-button ui-button--ghost ui-button--md"
+          to={`${projectBase}/my-tasks`}
+        >
+          My tasks
+        </Link>
+        <Button
+          variant={attentionOnly ? 'secondary' : 'ghost'}
+          aria-pressed={attentionOnly}
+          onClick={() => setBoardMode('attention')}
+        >
+          Needs attention
+        </Button>
+        <Button
+          variant={!attentionOnly ? 'secondary' : 'ghost'}
+          aria-pressed={!attentionOnly}
+          onClick={() => setBoardMode('workflow')}
+        >
+          Full workflow
+        </Button>
+      </nav>
+
       <section className="task-toolbar" aria-label="Task board filters">
         <Input
           label="Search tasks"
@@ -284,63 +355,82 @@ export function TaskBoardPage() {
           value={searchParams.get('search') ?? ''}
           onChange={(event) => setQueryParam('search', event.target.value)}
         />
-        <SelectField
-          label="Assignee"
-          name="assignee-filter"
-          value={filters.assigneeUserId ?? ''}
-          onChange={(event) => setQueryParam('assignee', event.target.value)}
+        <Button
+          variant="secondary"
+          leadingIcon={<SlidersHorizontal size={16} />}
+          aria-expanded={showAdvancedFilters}
+          aria-controls="task-advanced-filters"
+          onClick={() => setShowAdvancedFilters((current) => !current)}
         >
-          <option value="">All assignees</option>
-          {memberOptions.map((member) => (
-            <option key={member.userId} value={member.userId}>
-              {member.displayName}
-            </option>
-          ))}
-        </SelectField>
-        <SelectField
-          label="Sprint"
-          name="sprint-filter"
-          value={filters.sprintId ?? ''}
-          onChange={(event) => setQueryParam('sprint', event.target.value)}
-        >
-          <option value="">All sprints</option>
-          {sprintOptions.map((sprint) => (
-            <option key={sprint.id} value={sprint.id}>
-              {sprint.name}
-            </option>
-          ))}
-        </SelectField>
-        <SelectField
-          label="Priority"
-          name="priority-filter"
-          value={filters.priority ?? ''}
-          onChange={(event) => setQueryParam('priority', event.target.value)}
-        >
-          <option value="">All priorities</option>
-          <option value="Low">Low</option>
-          <option value="Medium">Medium</option>
-          <option value="High">High</option>
-          <option value="Urgent">Urgent</option>
-        </SelectField>
-        <SelectField
-          label="Sort"
-          name="task-sort"
-          value={sort}
-          onChange={(event) => setQueryParam('sort', event.target.value)}
-        >
-          <option value="due-asc">Deadline: soonest</option>
-          <option value="updated-desc">Recently updated</option>
-          <option value="code-asc">Task code</option>
-          <option value="priority-desc">Priority: highest</option>
-        </SelectField>
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            leadingIcon={<FilterX size={16} />}
-            onClick={clearFilters}
-          >
-            Clear
-          </Button>
+          {advancedFilterCount > 0
+            ? `Filters (${advancedFilterCount})`
+            : 'Filters'}
+        </Button>
+        {showAdvancedFilters && (
+          <div id="task-advanced-filters" className="task-toolbar__advanced">
+            <SelectField
+              label="Assignee"
+              name="assignee-filter"
+              value={filters.assigneeUserId ?? ''}
+              onChange={(event) =>
+                setQueryParam('assignee', event.target.value)
+              }
+            >
+              <option value="">All assignees</option>
+              {memberOptions.map((member) => (
+                <option key={member.userId} value={member.userId}>
+                  {member.displayName}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              label="Sprint"
+              name="sprint-filter"
+              value={filters.sprintId ?? ''}
+              onChange={(event) => setQueryParam('sprint', event.target.value)}
+            >
+              <option value="">All sprints</option>
+              {sprintOptions.map((sprint) => (
+                <option key={sprint.id} value={sprint.id}>
+                  {sprint.name}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              label="Priority"
+              name="priority-filter"
+              value={filters.priority ?? ''}
+              onChange={(event) =>
+                setQueryParam('priority', event.target.value)
+              }
+            >
+              <option value="">All priorities</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Urgent">Urgent</option>
+            </SelectField>
+            <SelectField
+              label="Sort"
+              name="task-sort"
+              value={sort}
+              onChange={(event) => setQueryParam('sort', event.target.value)}
+            >
+              <option value="due-asc">Deadline: soonest</option>
+              <option value="updated-desc">Recently updated</option>
+              <option value="code-asc">Task code</option>
+              <option value="priority-desc">Priority: highest</option>
+            </SelectField>
+            {hasFilters && (
+              <Button
+                variant="ghost"
+                leadingIcon={<FilterX size={16} />}
+                onClick={clearFilters}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
         )}
       </section>
 
@@ -403,6 +493,13 @@ export function TaskBoardPage() {
             ) : undefined
           }
         />
+      ) : attentionOnly ? (
+        <section
+          className="task-attention-list"
+          aria-label="Tasks needing attention"
+        >
+          {tasks.map(renderTaskCard)}
+        </section>
       ) : (
         <div className="task-board" tabIndex={0} aria-label="Kanban task board">
           {taskColumns.map((column) => {
@@ -426,30 +523,7 @@ export function TaskBoardPage() {
                   {columnTasks.length === 0 ? (
                     <p className="task-column__empty">No tasks</p>
                   ) : (
-                    columnTasks.map((task) => {
-                      const assignee =
-                        task.assignee?.displayName ?? 'Unassigned'
-                      return (
-                        <TaskCard
-                          key={task.id}
-                          code={task.code}
-                          title={task.title}
-                          status={statusForCard[task.status]}
-                          priority={priorityForCard[task.priority]}
-                          assignee={{
-                            name: assignee,
-                            initials: task.assignee
-                              ? memberInitials(assignee)
-                              : '—',
-                          }}
-                          dueDate={dueLabel(task.dueOn)}
-                          overdue={isOverdue(task)}
-                          blocked={task.status === 'Blocked'}
-                          selected={selectedTaskId === task.id}
-                          onClick={() => selectTask(task.id)}
-                        />
-                      )
-                    })
+                    columnTasks.map(renderTaskCard)
                   )}
                 </div>
               </section>

@@ -25,13 +25,30 @@
 
 .task-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1.6fr) repeat(4, minmax(150px, 1fr)) auto;
+  grid-template-columns: minmax(220px, 1fr) auto;
   gap: var(--space-3);
   align-items: end;
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+}
+
+.task-view-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.task-toolbar__advanced {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
+  gap: var(--space-3);
+  align-items: end;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
 }
 
 .task-toolbar .ui-field__message {
@@ -115,6 +132,13 @@
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-color: var(--color-border-strong) transparent;
+}
+
+.task-attention-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-4);
+  align-items: start;
 }
 
 .task-board:focus-visible {
@@ -711,12 +735,8 @@
 }
 
 @media (max-width: 1180px) {
-  .task-toolbar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .task-toolbar > .ui-field:first-child {
-    grid-column: span 2;
+  .task-toolbar__advanced {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -740,12 +760,12 @@
   }
 
   .task-toolbar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) auto;
     padding: var(--space-3);
   }
 
-  .task-toolbar > .ui-field:first-child {
-    grid-column: 1 / -1;
+  .task-toolbar__advanced {
+    grid-template-columns: 1fr;
   }
 
   .task-toolbar > .ui-button {
