@@ -120,10 +120,14 @@ export const router = createBrowserRouter([
                           },
                         ],
                       },
-                      {
-                        path: 'dev/components',
-                        element: <ComponentShowcaseRoute />,
-                      },
+                      ...(import.meta.env.DEV
+                        ? [
+                            {
+                              path: 'dev/components',
+                              element: <ComponentShowcaseRoute />,
+                            },
+                          ]
+                        : []),
                       { path: '*', element: <NotFoundPage /> },
                     ],
                   },

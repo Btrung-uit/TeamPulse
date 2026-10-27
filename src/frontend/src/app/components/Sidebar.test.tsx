@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { Sidebar } from '@/app/components/Sidebar'
+import { desktopNavigation } from '@/app/navigation/navigation'
 import {
   ProjectContext,
   type ProjectContextValue,
@@ -167,5 +168,16 @@ describe('workspace switcher', () => {
         '/workspaces/workspace-3/projects',
       ),
     )
+  })
+})
+
+describe('desktop navigation', () => {
+  it('omits development tools outside development builds', () => {
+    const groups = desktopNavigation('workspace-1', 'project-1', false)
+
+    expect(groups.map((group) => group.label)).not.toContain('Development')
+    expect(
+      groups.flatMap((group) => group.items.map((item) => item.label)),
+    ).not.toContain('UI components')
   })
 })

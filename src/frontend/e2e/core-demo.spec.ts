@@ -86,6 +86,11 @@ async function signIn(page: Page, email: string) {
   ).toBeVisible()
 }
 
+async function signOut(page: Page) {
+  await activate(page.getByRole('button', { name: /Open account menu/ }))
+  await activate(page.getByRole('menuitem', { name: 'Sign out' }))
+}
+
 test('leader import → member evidence → leader review → presentation', async ({
   browser,
   page,
@@ -174,7 +179,7 @@ test('leader import → member evidence → leader review → presentation', asy
   })
 
   await test.step('Member links evidence and submits the task for review', async () => {
-    await activate(page.getByRole('button', { name: /Sign out/ }))
+    await signOut(page)
     await signIn(page, memberEmail)
     await activate(page.getByRole('link', { name: 'TeamPulse Core Demo' }))
     await activate(page.getByRole('link', { name: 'Task board', exact: true }))
@@ -215,7 +220,7 @@ test('leader import → member evidence → leader review → presentation', asy
   })
 
   await test.step('Leader accepts the task', async () => {
-    await activate(page.getByRole('button', { name: /Sign out/ }))
+    await signOut(page)
     await signIn(page, leaderEmail)
     await activate(page.getByRole('link', { name: 'TeamPulse Core Demo' }))
     await activate(page.getByRole('link', { name: 'Task board', exact: true }))

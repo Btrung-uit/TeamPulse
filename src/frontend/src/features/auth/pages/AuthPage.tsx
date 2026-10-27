@@ -77,7 +77,6 @@ export function AuthPage({ mode }: AuthPageProps) {
           </Link>
 
           <div className="auth-page__story">
-            <p className="eyebrow">Project clarity</p>
             <h1>Turn teamwork into visible progress.</h1>
             <p>
               Plan tasks, connect evidence, and present every contribution from
@@ -107,9 +106,6 @@ export function AuthPage({ mode }: AuthPageProps) {
           <div className="auth-page__mobile-logo" aria-hidden="true">
             TP
           </div>
-          <p className="eyebrow">
-            {isRegister ? 'Create account' : 'Welcome back'}
-          </p>
           <h1>
             {isRegister ? 'Start your workspace' : 'Sign in to TeamPulse'}
           </h1>
@@ -170,6 +166,17 @@ export function AuthPage({ mode }: AuthPageProps) {
                 error={fieldErrors.confirmPassword?.[0]}
                 required
               />
+            )}
+
+            {!isRegister && (
+              <details className="auth-page__recovery">
+                <summary>Forgot password?</summary>
+                <p>
+                  Self-service password reset is not available yet. Contact the
+                  person who manages this TeamPulse deployment. Never share your
+                  password.
+                </p>
+              </details>
             )}
 
             {formError && (

@@ -27,6 +27,7 @@ export interface NavigationGroup {
 export function desktopNavigation(
   workspaceId: string,
   projectId?: string,
+  includeDevelopment = import.meta.env.DEV,
 ): NavigationGroup[] {
   const projectBase = projectId
     ? `/workspaces/${workspaceId}/projects/${projectId}`
@@ -108,16 +109,20 @@ export function desktopNavigation(
           },
         ]
       : []),
-    {
-      label: 'Development',
-      items: [
-        {
-          label: 'UI components',
-          to: `/workspaces/${workspaceId}/dev/components`,
-          icon: Palette,
-        },
-      ],
-    },
+    ...(includeDevelopment
+      ? [
+          {
+            label: 'Development',
+            items: [
+              {
+                label: 'UI components',
+                to: `/workspaces/${workspaceId}/dev/components`,
+                icon: Palette,
+              },
+            ],
+          },
+        ]
+      : []),
   ]
 }
 

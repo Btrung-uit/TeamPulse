@@ -81,4 +81,26 @@ describe('authentication flow', () => {
       password: 'WrongPass123',
     })
   })
+
+  it('offers an honest recovery path without promising an unavailable reset', async () => {
+    const user = userEvent.setup()
+
+    renderWithAuth(
+      anonymousAuth(),
+      [{ path: '/login', element: <AuthPage mode="login" /> }],
+      '/login',
+    )
+
+    const recovery = screen.getByText('Forgot password?')
+    const details = recovery.closest('details')
+    expect(details).not.toHaveAttribute('open')
+
+    await user.click(recovery)
+
+    expect(details).toHaveAttribute('open')
+    expect(
+      screen.getByText(/Self-service password reset is not available/),
+    ).toBeVisible()
+    expect(screen.getByText(/Never share your password/)).toBeVisible()
+  })
 })

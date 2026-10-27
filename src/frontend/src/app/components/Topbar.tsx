@@ -27,9 +27,12 @@ export function Topbar() {
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isNotificationOpen, setIsNotificationOpen] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
   const projectMenuRef = useRef<HTMLDivElement>(null)
   const notificationRef = useRef<HTMLDivElement>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+  const userMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const nextTheme = theme === 'dark' ? 'light' : 'dark'
   const initials = user?.displayName
     .split(/\s+/)
@@ -67,6 +70,7 @@ export function Topbar() {
         event.preventDefault()
         setIsProjectMenuOpen(false)
         setIsNotificationOpen(false)
+        setIsUserMenuOpen(false)
         setIsSearchOpen(true)
       }
     }
@@ -96,6 +100,30 @@ export function Topbar() {
     }
   }, [isNotificationOpen])
 
+  useEffect(() => {
+    if (!isUserMenuOpen) return
+
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsUserMenuOpen(false)
+        userMenuTriggerRef.current?.focus()
+      }
+    }
+
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [isUserMenuOpen])
+
   return (
     <header className="topbar">
       <div className="project-switcher-shell" ref={projectMenuRef}>
@@ -105,7 +133,10 @@ export function Topbar() {
           aria-haspopup="menu"
           aria-expanded={isProjectMenuOpen}
           disabled={status === 'loading'}
-          onClick={() => setIsProjectMenuOpen((open) => !open)}
+          onClick={() => {
+            setIsUserMenuOpen(false)
+            setIsProjectMenuOpen((open) => !open)
+          }}
         >
           <span className="project-switcher__mark" aria-hidden="true">
             {projectInitial}
@@ -165,6 +196,7 @@ export function Topbar() {
           onClick={() => {
             setIsProjectMenuOpen(false)
             setIsNotificationOpen(false)
+            setIsUserMenuOpen(false)
             setIsSearchOpen(true)
           }}
         >
@@ -182,6 +214,7 @@ export function Topbar() {
             aria-label={`View notifications, ${unreadNotificationCount} unread`}
             onClick={() => {
               setIsProjectMenuOpen(false)
+              setIsUserMenuOpen(false)
               setIsNotificationOpen((open) => !open)
             }}
           >
@@ -210,21 +243,45 @@ export function Topbar() {
           )}
         </button>
 
-        <button
-          className="user-menu"
-          type="button"
-          title="Sign out"
-          onClick={() => void logout()}
-        >
-          <span className="user-menu__avatar" aria-hidden="true">
-            {initials || 'TP'}
-          </span>
-          <span className="user-menu__copy">
-            <strong>{user?.displayName ?? 'TeamPulse user'}</strong>
-            <small>Sign out · {user?.email ?? 'Signed in'}</small>
-          </span>
-          <LogOut aria-hidden="true" size={16} />
-        </button>
+        <div className="user-menu-shell" ref={userMenuRef}>
+          <button
+            ref={userMenuTriggerRef}
+            className="user-menu"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={isUserMenuOpen}
+            onClick={() => {
+              setIsProjectMenuOpen(false)
+              setIsNotificationOpen(false)
+              setIsUserMenuOpen((open) => !open)
+            }}
+          >
+            <span className="user-menu__avatar" aria-hidden="true">
+              {initials || 'TP'}
+            </span>
+            <span className="user-menu__copy">
+              <strong>{user?.displayName ?? 'TeamPulse user'}</strong>
+              <small>{user?.email ?? 'Signed in'}</small>
+            </span>
+            <span className="sr-only">Open account menu</span>
+            <ChevronDown aria-hidden="true" size={16} />
+          </button>
+          {isUserMenuOpen && (
+            <div className="user-menu-panel" role="menu" aria-label="Account">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setIsUserMenuOpen(false)
+                  void logout()
+                }}
+              >
+                <LogOut aria-hidden="true" size={16} />
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <WorkspaceSearchDialog
         isOpen={isSearchOpen}

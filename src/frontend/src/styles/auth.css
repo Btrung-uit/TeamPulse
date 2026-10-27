@@ -155,6 +155,30 @@
   margin-top: var(--space-2);
 }
 
+.auth-page__recovery {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.auth-page__recovery summary {
+  width: fit-content;
+  color: var(--color-accent-strong);
+  cursor: pointer;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.auth-page__recovery summary:hover {
+  text-decoration: underline;
+}
+
+.auth-page__recovery p {
+  max-width: 65ch;
+  margin: var(--space-3) 0 0;
+  overflow-wrap: anywhere;
+  line-height: var(--line-height-sm);
+}
+
 .auth-page__switch,
 .auth-page__security-note {
   color: var(--color-text-muted);
