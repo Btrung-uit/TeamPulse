@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TeamPulse.IntegrationTests;
 
@@ -166,6 +167,89 @@ public sealed class AuthenticationEndpointsTests : IClassFixture<TeamPulseApiFac
         var response = await client.GetAsync("/api/auth/me");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PasswordReset_ChangesPassword_RevokesRefreshSessions_AndCannotBeReused()
+    {
+        using var client = CreateClient();
+        var email = $"password-reset-{Guid.NewGuid():N}@example.com";
+        await RegisterAsync(client, email);
+
+        var requestResponse = await client.PostAsJsonAsync(
+            "/api/auth/password-reset-requests",
+            new { email });
+
+        Assert.Equal(HttpStatusCode.Accepted, requestResponse.StatusCode);
+        var sentEmail = _factory.Services
+            .GetRequiredService<TestTransactionalEmailSender>()
+            .Emails.Single(message =>
+                message.Kind == "password-reset" && message.Recipient == email);
+
+        var resetResponse = await client.PostAsJsonAsync("/api/auth/password-resets", new
+        {
+            userId = sentEmail.UserId,
+            token = sentEmail.Token,
+            newPassword = "NewStrongPass456",
+        });
+
+        Assert.Equal(HttpStatusCode.NoContent, resetResponse.StatusCode);
+        var revokedRefresh = await client.PostAsync("/api/auth/refresh", content: null);
+        Assert.Equal(HttpStatusCode.Unauthorized, revokedRefresh.StatusCode);
+
+        using var loginClient = CreateClient();
+        var oldPasswordLogin = await loginClient.PostAsJsonAsync("/api/auth/login", new
+        {
+            email,
+            password = "StrongPass123",
+        });
+        Assert.Equal(HttpStatusCode.Unauthorized, oldPasswordLogin.StatusCode);
+
+        var newPasswordLogin = await loginClient.PostAsJsonAsync("/api/auth/login", new
+        {
+            email,
+            password = "NewStrongPass456",
+        });
+        Assert.Equal(HttpStatusCode.OK, newPasswordLogin.StatusCode);
+
+        var reusedToken = await loginClient.PostAsJsonAsync("/api/auth/password-resets", new
+        {
+            userId = sentEmail.UserId,
+            token = sentEmail.Token,
+            newPassword = "AnotherStrongPass789",
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, reusedToken.StatusCode);
+    }
+
+    [Fact]
+    public async Task PasswordResetRequest_DoesNotRevealWhetherAccountExists()
+    {
+        using var client = CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/password-reset-requests",
+            new { email = $"missing-{Guid.NewGuid():N}@example.com" });
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Empty(await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task PasswordResetRequest_DoesNotRevealEmailDeliveryFailure()
+    {
+        using var client = CreateClient();
+        var email = $"delivery-failure-{Guid.NewGuid():N}@example.com";
+        await RegisterAsync(client, email);
+        _factory.Services
+            .GetRequiredService<TestTransactionalEmailSender>()
+            .FailFor(email);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/password-reset-requests",
+            new { email });
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Empty(await response.Content.ReadAsStringAsync());
     }
 
     private HttpClient CreateClient()

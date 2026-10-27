@@ -2,8 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using TeamPulse.Api.Contracts;
+using TeamPulse.Api.Security;
 using TeamPulse.Application.Workspaces;
 using TeamPulse.Domain.Workspaces;
+using TeamPulse.Domain.Users;
 using TeamPulse.Infrastructure.Authorization;
 
 namespace TeamPulse.Api.Endpoints;
@@ -24,8 +26,16 @@ public static class WorkspaceEndpoints
             .RequireAuthorization(WorkspacePolicies.Member);
         group.MapPost("/{workspaceId:guid}/members", AddMemberAsync)
             .RequireAuthorization(WorkspacePolicies.Leader);
+        group.MapPost("/{workspaceId:guid}/invitations", InviteAsync)
+            .RequireAuthorization(WorkspacePolicies.Leader)
+            .RequireRateLimiting(SecurityPolicies.AuthRateLimit);
         group.MapPatch("/{workspaceId:guid}/members/{userId:guid}/role", ChangeRoleAsync)
             .RequireAuthorization(WorkspacePolicies.Leader);
+
+        endpoints.MapGroup("/api/workspace-invitations")
+            .WithTags("Workspace invitations")
+            .RequireAuthorization()
+            .MapPost("/accept", AcceptInvitationAsync);
 
         return endpoints;
     }
@@ -149,6 +159,57 @@ public static class WorkspaceEndpoints
             : MapFailure(result.Failure);
     }
 
+    private static async Task<IResult> InviteAsync(
+        Guid workspaceId,
+        WorkspaceInvitationRequest request,
+        ClaimsPrincipal principal,
+        IWorkspaceService workspaceService,
+        CancellationToken cancellationToken)
+    {
+        var email = request.Email?.Trim() ?? string.Empty;
+        if (email.Length == 0 ||
+            email.Length > User.EmailMaximumLength ||
+            !new EmailAddressAttribute().IsValid(email))
+        {
+            return ValidationError("email", "Enter a valid email address.");
+        }
+
+        if (!TryParseRole(request.Role, out var role))
+        {
+            return ValidationError("role", "Role must be Leader, Member, or Advisor.");
+        }
+
+        var result = await workspaceService.InviteAsync(
+            workspaceId,
+            GetRequiredUserId(principal),
+            email,
+            role,
+            cancellationToken);
+        return result.Succeeded ? Results.Accepted() : MapFailure(result.Failure);
+    }
+
+    private static async Task<IResult> AcceptInvitationAsync(
+        AcceptWorkspaceInvitationRequest request,
+        ClaimsPrincipal principal,
+        IWorkspaceService workspaceService,
+        CancellationToken cancellationToken)
+    {
+        if (request.Token is null ||
+            request.Token.Length != 64 ||
+            !request.Token.All(Uri.IsHexDigit))
+        {
+            return InvalidInvitation();
+        }
+
+        var result = await workspaceService.AcceptInvitationAsync(
+            GetRequiredUserId(principal),
+            request.Token,
+            cancellationToken);
+        return result.Succeeded
+            ? Results.Ok(ToResponse(result.Value!))
+            : MapFailure(result.Failure);
+    }
+
     private static Guid GetRequiredUserId(ClaimsPrincipal principal)
     {
         return Guid.Parse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
@@ -175,10 +236,15 @@ public static class WorkspaceEndpoints
         WorkspaceFailure.LastLeader => Results.Conflict(new ApiErrorResponse(
             "last_leader",
             "Assign another leader before changing the final leader's role.")),
+        WorkspaceFailure.InvalidInvitation => InvalidInvitation(),
         _ => Results.NotFound(new ApiErrorResponse(
             "member_not_found",
             "The workspace member was not found.")),
     };
+
+    private static IResult InvalidInvitation() => Results.BadRequest(new ApiErrorResponse(
+        "invalid_invitation",
+        "This workspace invitation is invalid or has expired."));
 
     private static IResult ValidationError(string field, string message)
     {
@@ -199,6 +265,10 @@ public static class WorkspaceEndpoints
     public sealed record AddWorkspaceMemberRequest(string Email, string Role);
 
     public sealed record ChangeWorkspaceRoleRequest(string Role);
+
+    public sealed record WorkspaceInvitationRequest(string Email, string Role);
+
+    public sealed record AcceptWorkspaceInvitationRequest(string Token);
 
     private sealed record WorkspaceResponse(Guid Id, string Name, string Role, int MemberCount);
 

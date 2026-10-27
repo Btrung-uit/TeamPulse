@@ -129,14 +129,77 @@ public sealed class WorkspaceMembershipEndpointsTests : IClassFixture<TeamPulseA
         Assert.All(workspaces, workspace => Assert.Equal(1, workspace.MemberCount));
     }
 
-    private async Task<RegisteredUser> RegisterAsync(string displayName)
+    [Fact]
+    public async Task WorkspaceInvitation_AddsMatchingRegisteredUser_AndCannotBeReused()
+    {
+        var leader = await RegisterAsync("Invitation Leader");
+        var workspaceId = await CreateWorkspaceAsync(leader.Client, "Invitation Workspace");
+        var candidateEmail = $"invited-{Guid.NewGuid():N}@example.com";
+
+        var inviteResponse = await leader.Client.PostAsJsonAsync(
+            $"/api/workspaces/{workspaceId}/invitations",
+            new { email = candidateEmail, role = "Member" });
+
+        Assert.Equal(HttpStatusCode.Accepted, inviteResponse.StatusCode);
+        var invitationEmail = _factory.Services
+            .GetRequiredService<TestTransactionalEmailSender>()
+            .Emails.Single(message =>
+                message.Kind == "workspace-invitation" &&
+                message.Recipient == candidateEmail);
+
+        var candidate = await RegisterAsync("Invited Candidate", candidateEmail);
+        var acceptResponse = await candidate.Client.PostAsJsonAsync(
+            "/api/workspace-invitations/accept",
+            new { token = invitationEmail.Token });
+
+        Assert.Equal(HttpStatusCode.OK, acceptResponse.StatusCode);
+        var workspaces = await candidate.Client.GetFromJsonAsync<List<WorkspaceResponse>>(
+            "/api/workspaces");
+        Assert.Contains(workspaces!, workspace =>
+            workspace.Id == workspaceId && workspace.Role == "Member");
+
+        var reusedInvitation = await candidate.Client.PostAsJsonAsync(
+            "/api/workspace-invitations/accept",
+            new { token = invitationEmail.Token });
+        Assert.Equal(HttpStatusCode.BadRequest, reusedInvitation.StatusCode);
+    }
+
+    [Fact]
+    public async Task WorkspaceInvitation_RejectsAccountWithDifferentEmail()
+    {
+        var leader = await RegisterAsync("Mismatch Leader");
+        var otherUser = await RegisterAsync("Mismatch User");
+        var workspaceId = await CreateWorkspaceAsync(leader.Client, "Private Workspace");
+        var intendedEmail = $"intended-{Guid.NewGuid():N}@example.com";
+
+        var inviteResponse = await leader.Client.PostAsJsonAsync(
+            $"/api/workspaces/{workspaceId}/invitations",
+            new { email = intendedEmail, role = "Advisor" });
+        Assert.Equal(HttpStatusCode.Accepted, inviteResponse.StatusCode);
+        var invitationEmail = _factory.Services
+            .GetRequiredService<TestTransactionalEmailSender>()
+            .Emails.Single(message =>
+                message.Kind == "workspace-invitation" &&
+                message.Recipient == intendedEmail);
+
+        var response = await otherUser.Client.PostAsJsonAsync(
+            "/api/workspace-invitations/accept",
+            new { token = invitationEmail.Token });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var workspaces = await otherUser.Client.GetFromJsonAsync<List<WorkspaceResponse>>(
+            "/api/workspaces");
+        Assert.DoesNotContain(workspaces!, workspace => workspace.Id == workspaceId);
+    }
+
+    private async Task<RegisteredUser> RegisterAsync(string displayName, string? email = null)
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
             HandleCookies = true,
         });
-        var email = $"{displayName.Replace(" ", string.Empty).ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
+        email ??= $"{displayName.Replace(" ", string.Empty).ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
 
         var response = await client.PostAsJsonAsync("/api/auth/register", new
         {

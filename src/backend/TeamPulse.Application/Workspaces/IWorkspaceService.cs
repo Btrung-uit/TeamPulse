@@ -35,4 +35,16 @@ public interface IWorkspaceService
         Guid memberUserId,
         WorkspaceRole role,
         CancellationToken cancellationToken = default);
+
+    Task<WorkspaceResult<bool>> InviteAsync(
+        Guid workspaceId,
+        Guid actorUserId,
+        string email,
+        WorkspaceRole role,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkspaceResult<WorkspaceSummary>> AcceptInvitationAsync(
+        Guid userId,
+        string token,
+        CancellationToken cancellationToken = default);
 }

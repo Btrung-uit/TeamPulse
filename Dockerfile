@@ -29,7 +29,7 @@ RUN dotnet publish src/backend/TeamPulse.Api/TeamPulse.Api.csproj \
     /p:UseAppHost=false
 
 FROM backend-restore AS migration-build
-RUN dotnet tool install --tool-path /tools dotnet-ef --version 10.0.12
+RUN dotnet tool install --tool-path /tools dotnet-ef --version 10.0.13
 RUN Authentication__Jwt__SigningKey=BuildOnlySigningKey_AtLeast32Bytes_Long \
     ConnectionStrings__TeamPulse="Server=localhost;Database=TeamPulse;User Id=sa;Password=BuildOnlyPassword_123!;TrustServerCertificate=True" \
     /tools/dotnet-ef migrations bundle \

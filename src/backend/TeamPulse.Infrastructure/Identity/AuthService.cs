@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using TeamPulse.Application.Authentication;
+using TeamPulse.Application.Notifications;
 using TeamPulse.Domain.Users;
 using TeamPulse.Infrastructure.Persistence;
 
@@ -12,6 +14,8 @@ internal sealed class AuthService(
     UserManager<IdentityAccount> userManager,
     SignInManager<IdentityAccount> signInManager,
     TokenService tokenService,
+    ITransactionalEmailSender emailSender,
+    ILogger<AuthService> logger,
     TimeProvider timeProvider) : IAuthService
 {
     public async Task<AuthResult> RegisterAsync(
@@ -184,6 +188,59 @@ internal sealed class AuthService(
             .Where(user => user.Id == userId)
             .Select(user => new AuthenticatedUser(user.Id, user.Email, user.DisplayName))
             .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task RequestPasswordResetAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        var account = await userManager.FindByEmailAsync(email.Trim());
+        if (account is null)
+        {
+            return;
+        }
+
+        var token = await userManager.GeneratePasswordResetTokenAsync(account);
+        try
+        {
+            await emailSender.SendPasswordResetAsync(
+                account.Email!,
+                account.Id,
+                token,
+                cancellationToken);
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogError(
+                exception,
+                "Password reset email delivery failed for user {UserId}.",
+                account.Id);
+        }
+    }
+
+    public async Task<bool> ResetPasswordAsync(
+        Guid userId,
+        string token,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        var account = await userManager.FindByIdAsync(userId.ToString());
+        if (account is null)
+        {
+            return false;
+        }
+
+        var result = await userManager.ResetPasswordAsync(account, token, newPassword);
+        if (!result.Succeeded)
+        {
+            return false;
+        }
+
+        await RevokeAllActiveSessionsAsync(
+            account.Id,
+            timeProvider.GetUtcNow(),
+            cancellationToken);
+        return true;
     }
 
     private AuthSession CreateSession(User profile)

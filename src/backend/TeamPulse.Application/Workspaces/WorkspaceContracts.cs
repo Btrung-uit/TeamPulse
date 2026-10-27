@@ -21,6 +21,7 @@ public enum WorkspaceFailure
     UserNotFound,
     AlreadyMember,
     LastLeader,
+    InvalidInvitation,
 }
 
 public sealed record WorkspaceResult<T>(T? Value, WorkspaceFailure Failure)

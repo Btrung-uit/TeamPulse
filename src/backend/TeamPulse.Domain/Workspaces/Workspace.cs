@@ -33,6 +33,8 @@ public sealed class Workspace : AuditableEntity
 
     public ICollection<WorkspaceMember> Members { get; } = [];
 
+    public ICollection<WorkspaceInvitation> Invitations { get; } = [];
+
     public ICollection<ActivityLog> Activities { get; } = [];
 
     public ICollection<Project> Projects { get; } = [];

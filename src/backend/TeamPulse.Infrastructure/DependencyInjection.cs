@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -73,7 +74,15 @@ public static class DependencyInjection
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
             })
             .AddSignInManager()
+            .AddDefaultTokenProviders()
             .AddEntityFrameworkStores<TeamPulseDbContext>();
+
+        services.AddDataProtection()
+            .SetApplicationName("TeamPulse")
+            .PersistKeysToDbContext<TeamPulseDbContext>();
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+            options.TokenLifespan = TimeSpan.FromMinutes(
+                configuration.GetValue("Authentication:PasswordResetTokenMinutes", 30)));
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -124,10 +133,26 @@ public static class DependencyInjection
         services.AddScoped<IResourceService, ResourceService>();
         services.AddScoped<IWorkspaceSearchService, WorkspaceSearchService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<ITransactionalEmailSender, SmtpTransactionalEmailSender>();
         services.AddScoped<IGitHubWebhookReceiver, GitHubWebhookReceiver>();
         services.AddScoped<IGitHubWebhookEventHandler, GitHubTaskAutomationHandler>();
         services.AddScoped<IGitHubPullRequestService, GitHubPullRequestService>();
         services.AddHostedService<GitHubWebhookWorker>();
+
+        services
+            .AddOptions<EmailOptions>()
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .Validate(
+                options => Uri.TryCreate(options.PublicAppUrl, UriKind.Absolute, out _),
+                "Email PublicAppUrl must be an absolute URL.")
+            .Validate(options => !options.Enabled ||
+                (!string.IsNullOrWhiteSpace(options.SmtpHost) &&
+                 options.SmtpPort is >= 1 and <= 65535 &&
+                 !string.IsNullOrWhiteSpace(options.SmtpUsername) &&
+                 !string.IsNullOrWhiteSpace(options.SmtpPassword) &&
+                 !string.IsNullOrWhiteSpace(options.SenderAddress)),
+                "Enabled email delivery requires complete SMTP settings.")
+            .ValidateOnStart();
 
         services
             .AddOptions<GitHubWebhookOptions>()

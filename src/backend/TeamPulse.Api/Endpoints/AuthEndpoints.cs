@@ -23,6 +23,10 @@ public static class AuthEndpoints
             .RequireRateLimiting(SecurityPolicies.AuthRateLimit);
         group.MapPost("/refresh", RefreshAsync)
             .RequireRateLimiting(SecurityPolicies.AuthRateLimit);
+        group.MapPost("/password-reset-requests", RequestPasswordResetAsync)
+            .RequireRateLimiting(SecurityPolicies.AuthRateLimit);
+        group.MapPost("/password-resets", ResetPasswordAsync)
+            .RequireRateLimiting(SecurityPolicies.AuthRateLimit);
         group.MapPost("/logout", LogoutAsync);
         group.MapGet("/me", GetCurrentUserAsync).RequireAuthorization();
 
@@ -141,6 +145,53 @@ public static class AuthEndpoints
         return user is null ? Results.Unauthorized() : Results.Ok(user);
     }
 
+    private static async Task<IResult> RequestPasswordResetAsync(
+        PasswordResetRequest request,
+        HttpContext httpContext,
+        IAuthService authService,
+        CancellationToken cancellationToken)
+    {
+        DisableCaching(httpContext);
+        var email = request.Email?.Trim() ?? string.Empty;
+        if (email.Length > 0 &&
+            email.Length <= User.EmailMaximumLength &&
+            new EmailAddressAttribute().IsValid(email))
+        {
+            await authService.RequestPasswordResetAsync(email, cancellationToken);
+        }
+
+        return Results.Accepted();
+    }
+
+    private static async Task<IResult> ResetPasswordAsync(
+        PasswordResetConfirmation request,
+        HttpContext httpContext,
+        IAuthService authService,
+        CancellationToken cancellationToken)
+    {
+        DisableCaching(httpContext);
+        if (request.UserId == Guid.Empty || string.IsNullOrWhiteSpace(request.Token))
+        {
+            return InvalidResetToken();
+        }
+
+        var errors = ValidatePassword(request.NewPassword, "newPassword");
+        if (errors.Count > 0)
+        {
+            return Results.BadRequest(new ApiErrorResponse(
+                "validation_failed",
+                "Please correct the highlighted fields.",
+                errors));
+        }
+
+        var succeeded = await authService.ResetPasswordAsync(
+            request.UserId,
+            request.Token,
+            request.NewPassword,
+            cancellationToken);
+        return succeeded ? Results.NoContent() : InvalidResetToken();
+    }
+
     private static IResult CreateSessionResult(
         HttpContext httpContext,
         AuthSession session,
@@ -203,6 +254,11 @@ public static class AuthEndpoints
             statusCode: StatusCodes.Status401Unauthorized);
     }
 
+    private static IResult InvalidResetToken() => Results.BadRequest(
+        new ApiErrorResponse(
+            "invalid_password_reset",
+            "This password reset link is invalid or has expired."));
+
     private static Dictionary<string, string[]> ValidateRegistration(RegisterRequest request)
     {
         var errors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
@@ -222,18 +278,9 @@ public static class AuthEndpoints
                 [$"Display name must contain 1 to {User.DisplayNameMaximumLength} characters."];
         }
 
-        if (request.Password is null ||
-            request.Password.Length < 8 ||
-            request.Password.Length > PasswordMaximumLength ||
-            !request.Password.Any(char.IsUpper) ||
-            !request.Password.Any(char.IsLower) ||
-            !request.Password.Any(char.IsDigit))
+        foreach (var error in ValidatePassword(request.Password, "password"))
         {
-            errors["password"] =
-            [
-                $"Password must contain 8 to {PasswordMaximumLength} characters, " +
-                "including uppercase, lowercase, and a number.",
-            ];
+            errors[error.Key] = error.Value;
         }
 
         return errors;
@@ -243,8 +290,32 @@ public static class AuthEndpoints
 
     public sealed record LoginRequest(string Email, string Password);
 
+    public sealed record PasswordResetRequest(string Email);
+
+    public sealed record PasswordResetConfirmation(Guid UserId, string Token, string NewPassword);
+
     private sealed record SessionResponse(
         AuthenticatedUser User,
         string AccessToken,
         DateTimeOffset AccessTokenExpiresAtUtc);
+
+    private static Dictionary<string, string[]> ValidatePassword(string? password, string field)
+    {
+        var errors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        if (password is null ||
+            password.Length < 8 ||
+            password.Length > PasswordMaximumLength ||
+            !password.Any(char.IsUpper) ||
+            !password.Any(char.IsLower) ||
+            !password.Any(char.IsDigit))
+        {
+            errors[field] =
+            [
+                $"Password must contain 8 to {PasswordMaximumLength} characters, " +
+                "including uppercase, lowercase, and a number.",
+            ];
+        }
+
+        return errors;
+    }
 }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using TeamPulse.Application.Notifications;
 using TeamPulse.Infrastructure.Persistence;
 
 namespace TeamPulse.IntegrationTests;
@@ -25,6 +26,8 @@ public sealed class TeamPulseApiFactory : WebApplicationFactory<Program>
             "TeamPulse_integration_test_signing_key_2026_at_least_32_bytes");
         builder.UseSetting("Authentication:Jwt:AccessTokenMinutes", "15");
         builder.UseSetting("Authentication:Jwt:RefreshTokenDays", "7");
+        builder.UseSetting("Authentication:PasswordResetTokenMinutes", "30");
+        builder.UseSetting("Email:PublicAppUrl", "https://teampulse.test");
 
         builder.ConfigureServices(services =>
         {
@@ -32,6 +35,10 @@ public sealed class TeamPulseApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<TeamPulseDbContext>>();
             services.AddDbContext<TeamPulseDbContext>(options =>
                 options.UseInMemoryDatabase(_databaseName));
+            services.RemoveAll<ITransactionalEmailSender>();
+            services.AddSingleton<TestTransactionalEmailSender>();
+            services.AddSingleton<ITransactionalEmailSender>(provider =>
+                provider.GetRequiredService<TestTransactionalEmailSender>());
         });
     }
 }

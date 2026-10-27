@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 using TeamPulse.Application.Workspaces;
+using TeamPulse.Application.Notifications;
 using TeamPulse.Domain.Activities;
 using TeamPulse.Domain.Workspaces;
 using TeamPulse.Infrastructure.Persistence;
@@ -8,8 +10,11 @@ namespace TeamPulse.Infrastructure.Workspaces;
 
 internal sealed class WorkspaceService(
     TeamPulseDbContext dbContext,
+    ITransactionalEmailSender emailSender,
     TimeProvider timeProvider) : IWorkspaceService
 {
+    private static readonly TimeSpan InvitationLifetime = TimeSpan.FromDays(7);
+
     public async Task<IReadOnlyList<WorkspaceSummary>> ListForUserAsync(
         Guid userId,
         CancellationToken cancellationToken = default)
@@ -214,6 +219,150 @@ internal sealed class WorkspaceService(
         await dbContext.SaveChangesAsync(cancellationToken);
         return WorkspaceResult<WorkspaceMemberDetails>.Success(ToDetails(membership));
     }
+
+    public async Task<WorkspaceResult<bool>> InviteAsync(
+        Guid workspaceId,
+        Guid actorUserId,
+        string email,
+        WorkspaceRole role,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = email.Trim().ToUpperInvariant();
+        var activeMemberExists = await dbContext.WorkspaceMembers
+            .AnyAsync(member =>
+                member.WorkspaceId == workspaceId &&
+                member.IsActive &&
+                member.User.NormalizedEmail == normalizedEmail,
+                cancellationToken);
+        if (activeMemberExists)
+        {
+            return WorkspaceResult<bool>.Failed(WorkspaceFailure.AlreadyMember);
+        }
+
+        var workspaceName = await dbContext.Workspaces
+            .Where(workspace => workspace.Id == workspaceId)
+            .Select(workspace => workspace.Name)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (workspaceName is null)
+        {
+            return WorkspaceResult<bool>.Failed(WorkspaceFailure.WorkspaceNotFound);
+        }
+
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+        var tokenHash = HashToken(token);
+        var expiresAtUtc = timeProvider.GetUtcNow().Add(InvitationLifetime);
+        var invitation = await dbContext.WorkspaceInvitations.SingleOrDefaultAsync(
+            candidate =>
+                candidate.WorkspaceId == workspaceId &&
+                candidate.NormalizedEmail == normalizedEmail,
+            cancellationToken);
+
+        if (invitation is null)
+        {
+            invitation = new WorkspaceInvitation(
+                Guid.NewGuid(),
+                workspaceId,
+                actorUserId,
+                email.Trim(),
+                role,
+                tokenHash,
+                expiresAtUtc);
+            dbContext.WorkspaceInvitations.Add(invitation);
+        }
+        else
+        {
+            invitation.Renew(email.Trim(), role, tokenHash, expiresAtUtc);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await emailSender.SendWorkspaceInvitationAsync(
+            invitation.Email,
+            workspaceName,
+            token,
+            cancellationToken);
+        return WorkspaceResult<bool>.Success(true);
+    }
+
+    public async Task<WorkspaceResult<WorkspaceSummary>> AcceptInvitationAsync(
+        Guid userId,
+        string token,
+        CancellationToken cancellationToken = default)
+    {
+        var tokenHash = HashToken(token);
+        var invitation = await dbContext.WorkspaceInvitations
+            .IgnoreQueryFilters()
+            .SingleOrDefaultAsync(candidate => candidate.TokenHash == tokenHash, cancellationToken);
+        var user = await dbContext.UserProfiles.SingleOrDefaultAsync(
+            candidate => candidate.Id == userId,
+            cancellationToken);
+        var now = timeProvider.GetUtcNow();
+
+        if (invitation is null ||
+            user is null ||
+            !invitation.CanBeAcceptedAt(now) ||
+            !string.Equals(
+                invitation.NormalizedEmail,
+                user.NormalizedEmail,
+                StringComparison.Ordinal))
+        {
+            return WorkspaceResult<WorkspaceSummary>.Failed(WorkspaceFailure.InvalidInvitation);
+        }
+
+        var membership = await dbContext.WorkspaceMembers
+            .IgnoreQueryFilters()
+            .SingleOrDefaultAsync(
+            candidate =>
+                candidate.WorkspaceId == invitation.WorkspaceId &&
+                candidate.UserId == userId,
+            cancellationToken);
+        if (membership is { IsActive: true })
+        {
+            return WorkspaceResult<WorkspaceSummary>.Failed(WorkspaceFailure.AlreadyMember);
+        }
+
+        if (membership is null)
+        {
+            membership = new WorkspaceMember(invitation.WorkspaceId, userId, invitation.Role);
+            dbContext.WorkspaceMembers.Add(membership);
+        }
+        else
+        {
+            membership.ChangeRole(invitation.Role);
+            membership.Reactivate();
+        }
+
+        invitation.Accept(now);
+        dbContext.ActivityLogs.Add(new ActivityLog(
+            Guid.NewGuid(),
+            invitation.WorkspaceId,
+            userId,
+            ActivityAction.WorkspaceMemberAdded,
+            "WorkspaceMember",
+            userId,
+            now,
+            userId,
+            newValue: invitation.Role.ToString()));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var workspaceName = await dbContext.Workspaces
+            .IgnoreQueryFilters()
+            .Where(candidate => candidate.Id == invitation.WorkspaceId)
+            .Select(candidate => candidate.Name)
+            .SingleAsync(cancellationToken);
+        var memberCount = await dbContext.WorkspaceMembers
+            .IgnoreQueryFilters()
+            .CountAsync(
+            candidate => candidate.WorkspaceId == invitation.WorkspaceId && candidate.IsActive,
+            cancellationToken);
+        return WorkspaceResult<WorkspaceSummary>.Success(new WorkspaceSummary(
+            invitation.WorkspaceId,
+            workspaceName,
+            invitation.Role,
+            memberCount));
+    }
+
+    private static string HashToken(string token) =>
+        Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
 
     private static WorkspaceMemberDetails ToDetails(WorkspaceMember membership) =>
         new(

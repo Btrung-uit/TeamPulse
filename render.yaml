@@ -17,6 +17,20 @@ services:
         sync: false
       - key: Authentication__Jwt__SigningKey
         generateValue: true
+      - key: Email__Enabled
+        value: "false"
+      - key: Email__PublicAppUrl
+        value: https://teampulse-xgq8.onrender.com
+      - key: Email__SmtpHost
+        sync: false
+      - key: Email__SmtpPort
+        value: "587"
+      - key: Email__SmtpUsername
+        sync: false
+      - key: Email__SmtpPassword
+        sync: false
+      - key: Email__SenderAddress
+        sync: false
       - key: Integrations__GitHub__Webhook__Enabled
         value: "false"
       - key: Integrations__GitHub__Webhook__Secret

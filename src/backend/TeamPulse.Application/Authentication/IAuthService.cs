@@ -24,4 +24,14 @@ public interface IAuthService
     Task<AuthenticatedUser?> GetUserAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    Task RequestPasswordResetAsync(
+        string email,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> ResetPasswordAsync(
+        Guid userId,
+        string token,
+        string newPassword,
+        CancellationToken cancellationToken = default);
 }

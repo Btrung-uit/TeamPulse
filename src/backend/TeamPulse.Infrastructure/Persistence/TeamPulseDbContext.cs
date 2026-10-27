@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TeamPulse.Application.Common.Interfaces;
 using TeamPulse.Domain.Activities;
@@ -19,7 +20,7 @@ public sealed class TeamPulseDbContext(
     DbContextOptions<TeamPulseDbContext> options,
     IWorkspaceScope workspaceScope,
     TimeProvider timeProvider)
-    : IdentityUserContext<IdentityAccount, Guid>(options)
+    : IdentityUserContext<IdentityAccount, Guid>(options), IDataProtectionKeyContext
 {
     private readonly IWorkspaceScope _workspaceScope = workspaceScope;
     private readonly TimeProvider _timeProvider = timeProvider;
@@ -29,6 +30,8 @@ public sealed class TeamPulseDbContext(
     public DbSet<Workspace> Workspaces => Set<Workspace>();
 
     public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
+
+    public DbSet<WorkspaceInvitation> WorkspaceInvitations => Set<WorkspaceInvitation>();
 
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
@@ -60,6 +63,8 @@ public sealed class TeamPulseDbContext(
 
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
 
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -74,6 +79,11 @@ public sealed class TeamPulseDbContext(
             .HasQueryFilter(member =>
                 _workspaceScope.WorkspaceId.HasValue &&
                 member.WorkspaceId == _workspaceScope.WorkspaceId.Value);
+
+        modelBuilder.Entity<WorkspaceInvitation>()
+            .HasQueryFilter(invitation =>
+                _workspaceScope.WorkspaceId.HasValue &&
+                invitation.WorkspaceId == _workspaceScope.WorkspaceId.Value);
 
         modelBuilder.Entity<ActivityLog>()
             .HasQueryFilter(activity =>
