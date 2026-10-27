@@ -1,7 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ToastProvider } from '@/components/ui/Toast/ToastProvider'
@@ -124,10 +130,16 @@ function taskPage(items: TaskSummary[], page = 1, totalPages = 1) {
 
 function LocationProbe() {
   const location = useLocation()
+  const navigate = useNavigate()
   return (
-    <output data-testid="location">
-      {location.pathname + location.search}
-    </output>
+    <>
+      <output data-testid="location">
+        {location.pathname + location.search}
+      </output>
+      <button type="button" onClick={() => navigate(-1)}>
+        Test browser back
+      </button>
+    </>
   )
 }
 
@@ -290,6 +302,38 @@ describe('task board flow', () => {
     expect(
       screen.getByRole('button', { name: 'Filters (1)' }),
     ).toBeInTheDocument()
+  })
+
+  it('reopens filters when browser history restores an active filter', async () => {
+    stubBoardTasks([task])
+    const user = userEvent.setup()
+
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?priority=High',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    await user.click(screen.getByRole('button', { name: 'Filters' }))
+    expect(screen.queryByLabelText('Priority')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Test browser back' }))
+
+    expect(await screen.findByLabelText('Priority')).toHaveValue('High')
+  })
+
+  it('does not describe the dashboard open-tasks deep link as full workflow', async () => {
+    stubBoardTasks([task])
+
+    renderBoard(
+      'Leader',
+      '/workspaces/workspace-1/projects/project-1/tasks?view=open',
+    )
+
+    expect(
+      await screen.findByRole('button', { name: 'Full workflow' }),
+    ).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByText('Open tasks only')).toBeInTheDocument()
   })
 
   it('renders needs-attention work as a compact list instead of seven columns', async () => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CalendarClock,
   Download,
@@ -128,6 +128,11 @@ export function TaskBoardPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(
     advancedFilterCount > 0,
   )
+  const isFullWorkflow = !attentionOnly && view !== 'open'
+
+  useEffect(() => {
+    if (advancedFilterCount > 0) setShowAdvancedFilters(true)
+  }, [advancedFilterCount])
   const tasksQuery = useTasks(workspaceId, projectId, filters)
   const options = useTaskOptions(workspaceId, projectId)
   const tasks = useMemo(() => {
@@ -339,8 +344,8 @@ export function TaskBoardPage() {
           Needs attention
         </Button>
         <Button
-          variant={!attentionOnly ? 'secondary' : 'ghost'}
-          aria-pressed={!attentionOnly}
+          variant={isFullWorkflow ? 'secondary' : 'ghost'}
+          aria-pressed={isFullWorkflow}
           onClick={() => setBoardMode('workflow')}
         >
           Full workflow
@@ -435,6 +440,12 @@ export function TaskBoardPage() {
       </section>
 
       <div className="task-board-summary" aria-live="polite">
+        {view === 'open' && (
+          <span>
+            <ListFilter aria-hidden="true" size={15} />
+            Open tasks only
+          </span>
+        )}
         <span>
           <ListFilter aria-hidden="true" size={15} />
           {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} shown
