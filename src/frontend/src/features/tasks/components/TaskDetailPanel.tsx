@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Archive,
   ArrowRight,
+  CircleHelp,
   ExternalLink,
   GitBranch,
   Link2,
@@ -19,6 +20,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { Button } from '@/components/ui/Button/Button'
 import { Input, Textarea } from '@/components/ui/Input/Input'
@@ -656,6 +658,13 @@ export function TaskDetailPanel({
                       : 'Your role or task assignment does not allow a status change.'}
                   </p>
                 )}
+                <Link
+                  className="context-help-link"
+                  to={`/workspaces/${workspaceId}/help#task-statuses`}
+                >
+                  <CircleHelp aria-hidden="true" size={15} />
+                  How task statuses work
+                </Link>
               </section>
 
               <form
@@ -829,6 +838,13 @@ export function TaskDetailPanel({
                   </div>
                   <Link2 aria-hidden="true" size={18} />
                 </div>
+                <Link
+                  className="context-help-link"
+                  to={`/workspaces/${workspaceId}/help#evidence`}
+                >
+                  <CircleHelp aria-hidden="true" size={15} />
+                  Evidence and resources explained
+                </Link>
 
                 {canAddEvidence && (
                   <form

@@ -3,6 +3,7 @@ import {
   Bell,
   Check,
   ChevronDown,
+  CircleHelp,
   FolderKanban,
   LogOut,
   Moon,
@@ -229,6 +230,17 @@ export function Topbar() {
             onUnreadCountChange={setUnreadNotificationCount}
           />
         </div>
+
+        {currentWorkspace && (
+          <Link
+            className="icon-button topbar-help"
+            to={`/workspaces/${currentWorkspace.id}/help`}
+            aria-label="Open help"
+            title="Help & glossary"
+          >
+            <CircleHelp aria-hidden="true" size={19} />
+          </Link>
+        )}
 
         <button
           className="icon-button"

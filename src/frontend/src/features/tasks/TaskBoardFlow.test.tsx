@@ -263,7 +263,10 @@ describe('task board flow', () => {
 
     await user.click(await screen.findByRole('checkbox', { name: /TP-023/ }))
     await user.click(screen.getByRole('checkbox', { name: /TP-024/ }))
-    await user.selectOptions(screen.getByLabelText('Move selected tasks to'), 'sprint-1')
+    await user.selectOptions(
+      screen.getByLabelText('Move selected tasks to'),
+      'sprint-1',
+    )
     await user.click(screen.getByRole('button', { name: 'Apply to 2 tasks' }))
 
     await waitFor(() => {
@@ -292,7 +295,9 @@ describe('task board flow', () => {
     leaderView.unmount()
     renderBoard('Member')
     await screen.findByText('Build task board')
-    expect(screen.queryByRole('checkbox', { name: /TP-023/ })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('checkbox', { name: /TP-023/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('supports guarded task-board keyboard shortcuts', async () => {
@@ -309,10 +314,14 @@ describe('task board flow', () => {
     await user.keyboard('/')
     expect(search).toHaveFocus()
     await user.keyboard('n')
-    expect(screen.queryByRole('dialog', { name: 'Create task' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('dialog', { name: 'Create task' }),
+    ).not.toBeInTheDocument()
     await user.tab()
     await user.keyboard('n')
-    expect(screen.getByRole('dialog', { name: 'Create task' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('dialog', { name: 'Create task' }),
+    ).toBeInTheDocument()
   })
 
   it('loads every API page and keeps filters in the current project URL', async () => {
@@ -725,6 +734,9 @@ describe('task board flow', () => {
     expect(
       await screen.findByRole('dialog', { name: 'TP-023 task details' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'How task statuses work' }),
+    ).toHaveAttribute('href', '/workspaces/workspace-1/help#task-statuses')
     expect(screen.getByTestId('location')).toHaveTextContent(
       '?priority=High&task=task-1',
     )
@@ -1088,6 +1100,11 @@ describe('task board flow', () => {
     const dialog = await screen.findByRole('dialog', {
       name: 'TP-023 task details',
     })
+    expect(
+      within(dialog).getByRole('link', {
+        name: 'Evidence and resources explained',
+      }),
+    ).toHaveAttribute('href', '/workspaces/workspace-1/help#evidence')
     await user.selectOptions(
       within(dialog).getByLabelText('Evidence type'),
       'PullRequest',

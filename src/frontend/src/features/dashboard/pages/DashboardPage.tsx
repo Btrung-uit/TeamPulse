@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowUpRight,
   CircleAlert,
+  CircleHelp,
   Clock3,
   GitPullRequest,
   ListTodo,
@@ -402,6 +403,13 @@ function DashboardPage() {
               No score or commit-count ranking
             </span>
           </div>
+          <Link
+            className="context-help-link"
+            to={`/workspaces/${workspaceId}/help#contribution`}
+          >
+            <CircleHelp aria-hidden="true" size={15} />
+            How contribution is counted
+          </Link>
           <div className="contribution-table-wrap">
             <table className="contribution-table">
               <thead>

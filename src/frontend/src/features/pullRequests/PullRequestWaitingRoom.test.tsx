@@ -80,6 +80,9 @@ describe('PR waiting room', () => {
     expect(
       screen.getByRole('link', { name: /open on github/i }),
     ).toHaveAttribute('href', feed.items[0].url)
+    expect(
+      screen.getByRole('link', { name: 'How the waiting room works' }),
+    ).toHaveAttribute('href', '/workspaces/workspace-1/help#pr-waiting-room')
 
     await user.click(screen.getByRole('tab', { name: 'Changes' }))
     await waitFor(() =>

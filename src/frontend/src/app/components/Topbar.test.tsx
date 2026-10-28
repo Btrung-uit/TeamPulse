@@ -71,6 +71,15 @@ function renderTopbar(logout: AuthContextValue['logout']) {
 }
 
 describe('topbar account menu', () => {
+  it('offers a workspace help entry point', () => {
+    renderTopbar(vi.fn().mockResolvedValue(undefined))
+
+    expect(screen.getByRole('link', { name: 'Open help' })).toHaveAttribute(
+      'href',
+      '/workspaces/workspace-1/help',
+    )
+  })
+
   it('requires an explicit Sign out menu choice before ending the session', async () => {
     const logout = vi.fn().mockResolvedValue(undefined)
     const user = userEvent.setup()

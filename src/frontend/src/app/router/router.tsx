@@ -7,6 +7,7 @@ import { DashboardRoute } from '@/app/router/DashboardRoute'
 import { PresentationRoute } from '@/app/router/PresentationRoute'
 import { ProtectedRoute, PublicOnlyRoute } from '@/features/auth/ProtectedRoute'
 import { AuthPage } from '@/features/auth/pages/AuthPage'
+import { HelpPage } from '@/features/help/pages/HelpPage'
 import { ProjectListPage } from '@/features/projects/pages/ProjectListPage'
 import { PullRequestWaitingRoomPage } from '@/features/pullRequests/pages/PullRequestWaitingRoomPage'
 import { ResourceHubPage } from '@/features/resources/pages/ResourceHubPage'
@@ -85,6 +86,7 @@ export const router = createBrowserRouter([
                       },
                       { path: 'projects', element: <ProjectListPage /> },
                       { path: 'members', element: <WorkspaceMembersPage /> },
+                      { path: 'help', element: <HelpPage /> },
                       {
                         path: 'projects/:projectId',
                         element: <ProjectRequiredRoute />,

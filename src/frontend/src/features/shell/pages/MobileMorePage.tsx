@@ -1,4 +1,5 @@
 import {
+  CircleHelp,
   FolderOpen,
   GitPullRequest,
   LayoutDashboard,
@@ -85,6 +86,13 @@ export function MobileMorePage() {
           <span>
             <strong>Presentation</strong>
             <small>Review the project story</small>
+          </span>
+        </Link>
+        <Link to={`${workspaceBase}/help`}>
+          <CircleHelp aria-hidden="true" size={19} />
+          <span>
+            <strong>Help & glossary</strong>
+            <small>Understand workflows and TeamPulse terms</small>
           </span>
         </Link>
       </nav>

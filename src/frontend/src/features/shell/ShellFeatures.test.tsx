@@ -139,6 +139,9 @@ describe('mobile more navigation', () => {
       'href',
       '/workspaces/workspace-1/projects/project-1/tasks?attention=true',
     )
+    expect(
+      screen.getByRole('link', { name: /Help & glossary/ }),
+    ).toHaveAttribute('href', '/workspaces/workspace-1/help')
   })
 })
 

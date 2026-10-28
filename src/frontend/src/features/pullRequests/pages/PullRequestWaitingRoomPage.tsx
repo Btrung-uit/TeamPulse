@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
+  CircleHelp,
   CircleDot,
   Clock3,
   ExternalLink,
@@ -9,6 +10,7 @@ import {
   RefreshCw,
   UserRoundCheck,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { Button } from '@/components/ui/Button/Button'
 import { EmptyState } from '@/components/ui/EmptyState/EmptyState'
@@ -93,6 +95,13 @@ export function PullRequestWaitingRoomPage() {
             See what needs review, changes, or merge. Code review stays on
             GitHub.
           </p>
+          <Link
+            className="context-help-link"
+            to={`/workspaces/${currentWorkspace!.id}/help#pr-waiting-room`}
+          >
+            <CircleHelp aria-hidden="true" size={15} />
+            How the waiting room works
+          </Link>
         </div>
         <Button
           variant="secondary"

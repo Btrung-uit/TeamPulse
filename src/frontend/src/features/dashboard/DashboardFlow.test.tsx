@@ -133,6 +133,9 @@ describe('Dashboard flow', () => {
     expect(
       screen.getByText('No score or commit-count ranking'),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'How contribution is counted' }),
+    ).toHaveAttribute('href', '/workspaces/workspace-1/help#contribution')
   })
 
   it('shows the first-use state when a project has no tasks', async () => {
