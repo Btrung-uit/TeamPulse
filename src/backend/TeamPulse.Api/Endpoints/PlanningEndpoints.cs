@@ -26,6 +26,8 @@ public static class PlanningEndpoints
 
         group.MapPut("/tasks/{taskId:guid}/sprint", AssignTaskToSprintAsync)
             .RequireAuthorization(WorkspacePolicies.Leader);
+        group.MapPut("/tasks/sprint", BulkAssignTasksToSprintAsync)
+            .RequireAuthorization(WorkspacePolicies.Leader);
 
         group.MapGet("/dependencies", ListDependenciesAsync);
         group.MapPost("/dependencies", CreateDependencyAsync)
@@ -161,6 +163,53 @@ public static class PlanningEndpoints
                 result.Value.SprintId,
                 result.Value.SprintName))
             : MapFailure(result.Failure);
+    }
+
+    private static async Task<IResult> BulkAssignTasksToSprintAsync(
+        Guid workspaceId,
+        Guid projectId,
+        BulkAssignTasksToSprintRequest request,
+        ClaimsPrincipal principal,
+        IPlanningService planningService,
+        CancellationToken cancellationToken)
+    {
+        if (request.SprintId == Guid.Empty)
+        {
+            return ValidationError(
+                "sprintId",
+                "Sprint ID must be null to move tasks to Backlog or a non-empty identifier.");
+        }
+
+        if (request.Tasks is null || request.Tasks.Count < 1)
+        {
+            return ValidationError("tasks", "Select at least one task.");
+        }
+
+        if (request.Tasks.Any(task => task.TaskId == Guid.Empty) ||
+            request.Tasks.Select(task => task.TaskId).Distinct().Count() != request.Tasks.Count)
+        {
+            return ValidationError("tasks", "Task identifiers must be non-empty and unique.");
+        }
+
+        var tasks = new List<BulkTaskVersion>(request.Tasks.Count);
+        foreach (var task in request.Tasks)
+        {
+            if (!TryDecodeRowVersion(task.RowVersion, out var rowVersion))
+            {
+                return ValidationError("tasks", "Every task must include a valid row version.");
+            }
+
+            tasks.Add(new BulkTaskVersion(task.TaskId, rowVersion));
+        }
+
+        var result = await planningService.BulkAssignTasksToSprintAsync(
+            workspaceId,
+            projectId,
+            GetRequiredUserId(principal),
+            new BulkAssignTasksToSprintCommand(request.SprintId, tasks),
+            cancellationToken);
+
+        return result.Succeeded ? Results.NoContent() : MapFailure(result.Failure);
     }
 
     private static async Task<IResult> ListDependenciesAsync(
@@ -299,6 +348,9 @@ public static class PlanningEndpoints
         PlanningFailure.TaskArchived => Results.Conflict(new ApiErrorResponse(
             "task_archived",
             "Archived tasks cannot be changed.")),
+        PlanningFailure.TaskConcurrencyConflict => Results.Conflict(new ApiErrorResponse(
+            "task_concurrency_conflict",
+            "One or more tasks changed after you loaded the board. Refresh and try again.")),
         PlanningFailure.SelfDependency => Results.Conflict(new ApiErrorResponse(
             "self_dependency",
             "A task cannot depend on itself.")),
@@ -359,6 +411,12 @@ public static class PlanningEndpoints
 
     public sealed record AssignTaskToSprintRequest(Guid? SprintId);
 
+    public sealed record BulkAssignTasksToSprintRequest(
+        Guid? SprintId,
+        IReadOnlyList<BulkTaskRequest>? Tasks);
+
+    public sealed record BulkTaskRequest(Guid TaskId, string? RowVersion);
+
     public sealed record SaveDependencyRequest(
         Guid PredecessorTaskId,
         Guid SuccessorTaskId);
@@ -380,6 +438,26 @@ public static class PlanningEndpoints
         string TaskCode,
         Guid? SprintId,
         string? SprintName);
+
+    private static bool TryDecodeRowVersion(string? value, out byte[] rowVersion)
+    {
+        if (value is null)
+        {
+            rowVersion = [];
+            return false;
+        }
+
+        try
+        {
+            rowVersion = Convert.FromBase64String(value);
+            return true;
+        }
+        catch (FormatException)
+        {
+            rowVersion = [];
+            return false;
+        }
+    }
 
     private sealed record DependencyTaskResponse(
         Guid Id,

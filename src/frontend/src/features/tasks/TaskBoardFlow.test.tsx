@@ -232,6 +232,89 @@ afterEach(() => {
 })
 
 describe('task board flow', () => {
+  it('lets a leader move selected visible tasks to a sprint in one request', async () => {
+    const secondTask = {
+      ...task,
+      id: 'task-2',
+      code: 'TP-024',
+      title: 'Build task detail',
+      rowVersion: 'version-2',
+    }
+    let bulkRequest: unknown
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const path = String(input)
+        const optionResponse = optionsResponse(path)
+        if (optionResponse) return optionResponse
+        if (path.endsWith('/tasks/sprint') && init?.method === 'PUT') {
+          bulkRequest = JSON.parse(String(init.body))
+          return new Response(null, { status: 204 })
+        }
+        if (path.includes('/tasks?')) {
+          return jsonResponse(taskPage([task, secondTask]))
+        }
+        throw new Error(`Unexpected request: ${path}`)
+      },
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderBoard()
+
+    await user.click(await screen.findByRole('checkbox', { name: /TP-023/ }))
+    await user.click(screen.getByRole('checkbox', { name: /TP-024/ }))
+    await user.selectOptions(screen.getByLabelText('Move selected tasks to'), 'sprint-1')
+    await user.click(screen.getByRole('button', { name: 'Apply to 2 tasks' }))
+
+    await waitFor(() => {
+      expect(bulkRequest).toEqual({
+        sprintId: 'sprint-1',
+        tasks: [
+          { taskId: 'task-1', rowVersion: '' },
+          { taskId: 'task-2', rowVersion: 'version-2' },
+        ],
+      })
+    })
+    expect(await screen.findByText('2 tasks moved')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Bulk task actions')).not.toBeInTheDocument()
+  })
+
+  it('clears bulk selection when filters change and hides it from members', async () => {
+    stubBoardTasks([task])
+    const user = userEvent.setup()
+
+    const leaderView = renderBoard()
+    await user.click(await screen.findByRole('checkbox', { name: /TP-023/ }))
+    expect(screen.getByLabelText('Bulk task actions')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Search tasks'), 'board')
+    expect(screen.queryByLabelText('Bulk task actions')).not.toBeInTheDocument()
+
+    leaderView.unmount()
+    renderBoard('Member')
+    await screen.findByText('Build task board')
+    expect(screen.queryByRole('checkbox', { name: /TP-023/ })).not.toBeInTheDocument()
+  })
+
+  it('supports guarded task-board keyboard shortcuts', async () => {
+    stubBoardTasks([task])
+    const user = userEvent.setup()
+
+    renderBoard()
+    const search = await screen.findByLabelText('Search tasks')
+
+    await user.click(await screen.findByRole('checkbox', { name: /TP-023/ }))
+    expect(screen.getByLabelText('Bulk task actions')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByLabelText('Bulk task actions')).not.toBeInTheDocument()
+    await user.keyboard('/')
+    expect(search).toHaveFocus()
+    await user.keyboard('n')
+    expect(screen.queryByRole('dialog', { name: 'Create task' })).not.toBeInTheDocument()
+    await user.tab()
+    await user.keyboard('n')
+    expect(screen.getByRole('dialog', { name: 'Create task' })).toBeInTheDocument()
+  })
+
   it('loads every API page and keeps filters in the current project URL', async () => {
     const secondTask = {
       ...task,

@@ -1,5 +1,6 @@
 import type {
   AddTaskEvidenceInput,
+  BulkAssignTaskSprintInput,
   ChangeTaskStatusInput,
   CreateTaskInput,
   PagedTaskResponse,
@@ -359,6 +360,19 @@ export const taskApi = {
       `${projectPath(workspaceId, projectId)}/tasks/${taskId}/archive`,
       accessToken,
       { method: 'POST', body: JSON.stringify({ rowVersion }) },
+    )
+  },
+
+  bulkAssignSprint(
+    accessToken: string,
+    workspaceId: string,
+    projectId: string,
+    input: BulkAssignTaskSprintInput,
+  ) {
+    return request<void>(
+      `${projectPath(workspaceId, projectId)}/tasks/sprint`,
+      accessToken,
+      { method: 'PUT', body: JSON.stringify(input) },
     )
   },
 

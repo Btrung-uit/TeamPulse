@@ -94,6 +94,11 @@ export interface ChangeTaskStatusInput {
   rowVersion: string
 }
 
+export interface BulkAssignTaskSprintInput {
+  sprintId: string | null
+  tasks: Array<{ taskId: string; rowVersion: string }>
+}
+
 export type TaskEvidenceType =
   'Commit' | 'PullRequest' | 'Issue' | 'Document' | 'Design' | 'Demo'
 

@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/useAuth'
 import { taskApi } from '@/features/tasks/taskApi'
 import type {
   AddTaskEvidenceInput,
+  BulkAssignTaskSprintInput,
   ChangeTaskStatusInput,
   CreateTaskInput,
   TaskDetails,
@@ -183,6 +184,32 @@ export function useArchiveTask(
     mutationFn: (rowVersion: string) =>
       taskApi.archive(accessToken!, workspaceId, projectId, taskId, rowVersion),
     onSuccess,
+  })
+}
+
+export function useBulkAssignTaskSprint(
+  workspaceId: string,
+  projectId: string,
+) {
+  const { accessToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: BulkAssignTaskSprintInput) =>
+      taskApi.bulkAssignSprint(accessToken!, workspaceId, projectId, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: taskKeys.project(workspaceId, projectId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.project(workspaceId, projectId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: taskKeys.sprints(workspaceId, projectId),
+        }),
+      ])
+    },
   })
 }
 

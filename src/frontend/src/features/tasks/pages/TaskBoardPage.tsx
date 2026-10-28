@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CalendarClock,
   Download,
@@ -34,7 +34,11 @@ import {
   taskColumns,
 } from '@/features/tasks/taskBoardModel'
 import { taskApi, TaskApiError } from '@/features/tasks/taskApi'
-import { useTaskOptions, useTasks } from '@/features/tasks/taskQueries'
+import {
+  useBulkAssignTaskSprint,
+  useTaskOptions,
+  useTasks,
+} from '@/features/tasks/taskQueries'
 import type { TaskFilters, TaskStatus } from '@/features/tasks/types'
 import { useWorkspace } from '@/features/workspaces/useWorkspace'
 import { useToast } from '@/components/ui/Toast/useToast'
@@ -97,6 +101,9 @@ export function TaskBoardPage() {
   const { currentProject } = useProject()
   const [searchParams, setSearchParams] = useSearchParams()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
+  const [bulkDestination, setBulkDestination] = useState('')
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [activeDownload, setActiveDownload] = useState<
     'template' | 'export' | null
   >(null)
@@ -135,6 +142,7 @@ export function TaskBoardPage() {
   }, [advancedFilterCount])
   const tasksQuery = useTasks(workspaceId, projectId, filters)
   const options = useTaskOptions(workspaceId, projectId)
+  const bulkAssignSprint = useBulkAssignTaskSprint(workspaceId, projectId)
   const tasks = useMemo(() => {
     const today = new Date()
     const todayKey = today.toISOString().slice(0, 10)
@@ -163,6 +171,61 @@ export function TaskBoardPage() {
     view === 'open' ||
     attentionOnly,
   )
+
+  useEffect(() => {
+    setSelectedTaskIds(new Set())
+    setBulkDestination('')
+  }, [
+    attentionOnly,
+    filters.assigneeUserId,
+    filters.priority,
+    filters.search,
+    filters.sprintId,
+    filters.status,
+    view,
+  ])
+
+  useEffect(() => {
+    const visibleTaskIds = new Set(tasks.map((task) => task.id))
+    setSelectedTaskIds(
+      (current) => new Set([...current].filter((id) => visibleTaskIds.has(id))),
+    )
+  }, [tasks])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null
+      const isEditable =
+        target?.matches(
+          'textarea, select, [contenteditable="true"], input:not([type="checkbox"]):not([type="radio"]):not([type="button"])',
+        ) ?? false
+      if (
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        isEditable ||
+        isCreateOpen ||
+        selectedTaskId
+      ) {
+        return
+      }
+
+      if (event.key === '/') {
+        event.preventDefault()
+        searchInputRef.current?.focus()
+      } else if (event.key.toLowerCase() === 'n' && canManage) {
+        event.preventDefault()
+        setIsCreateOpen(true)
+      } else if (event.key === 'Escape' && selectedTaskIds.size > 0) {
+        setSelectedTaskIds(new Set())
+        setBulkDestination('')
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [canManage, isCreateOpen, selectedTaskId, selectedTaskIds.size])
 
   async function downloadSpreadsheet(kind: 'template' | 'export') {
     if (!accessToken) return
@@ -261,25 +324,88 @@ export function TaskBoardPage() {
   const memberOptions = options.members.data ?? []
   const sprintOptions = options.sprints.data ?? []
 
+  function toggleTaskSelection(taskId: string) {
+    setSelectedTaskIds((current) => {
+      const next = new Set(current)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
+  }
+
+  function toggleAllVisible() {
+    setSelectedTaskIds((current) =>
+      tasks.every((task) => current.has(task.id))
+        ? new Set()
+        : new Set(tasks.map((task) => task.id)),
+    )
+  }
+
+  async function applyBulkSprint() {
+    if (!bulkDestination || selectedTaskIds.size === 0) return
+    const selectedTasks = tasks.filter((task) => selectedTaskIds.has(task.id))
+    try {
+      await bulkAssignSprint.mutateAsync({
+        sprintId: bulkDestination === 'backlog' ? null : bulkDestination,
+        tasks: selectedTasks.map((task) => ({
+          taskId: task.id,
+          rowVersion: task.rowVersion,
+        })),
+      })
+      const destination =
+        bulkDestination === 'backlog'
+          ? 'Backlog'
+          : sprintOptions.find((sprint) => sprint.id === bulkDestination)?.name
+      showToast({
+        title: `${selectedTasks.length} tasks moved`,
+        description: `Destination: ${destination ?? 'selected sprint'}.`,
+        variant: 'success',
+      })
+      setSelectedTaskIds(new Set())
+      setBulkDestination('')
+    } catch (error) {
+      showToast({
+        title: 'Tasks were not moved',
+        description:
+          error instanceof TaskApiError
+            ? error.body.message
+            : 'Please refresh the board and try again.',
+        variant: 'error',
+      })
+    }
+  }
+
   function renderTaskCard(task: (typeof tasks)[number]) {
     const assignee = task.assignee?.displayName ?? 'Unassigned'
     return (
-      <TaskCard
-        key={task.id}
-        code={task.code}
-        title={task.title}
-        status={statusForCard[task.status]}
-        priority={priorityForCard[task.priority]}
-        assignee={{
-          name: assignee,
-          initials: task.assignee ? memberInitials(assignee) : '—',
-        }}
-        dueDate={dueLabel(task.dueOn)}
-        overdue={isOverdue(task)}
-        blocked={task.status === 'Blocked'}
-        selected={selectedTaskId === task.id}
-        onClick={() => selectTask(task.id)}
-      />
+      <div className="task-card-selectable" key={task.id}>
+        {canManage && (
+          <input
+            className="task-card-selectable__checkbox"
+            type="checkbox"
+            aria-label={`Select ${task.code}: ${task.title}`}
+            checked={selectedTaskIds.has(task.id)}
+            onChange={() => toggleTaskSelection(task.id)}
+          />
+        )}
+        <TaskCard
+          code={task.code}
+          title={task.title}
+          status={statusForCard[task.status]}
+          priority={priorityForCard[task.priority]}
+          assignee={{
+            name: assignee,
+            initials: task.assignee ? memberInitials(assignee) : '—',
+          }}
+          dueDate={dueLabel(task.dueOn)}
+          overdue={isOverdue(task)}
+          blocked={task.status === 'Blocked'}
+          selected={
+            selectedTaskId === task.id || selectedTaskIds.has(task.id)
+          }
+          onClick={() => selectTask(task.id)}
+        />
+      </div>
     )
   }
 
@@ -354,6 +480,7 @@ export function TaskBoardPage() {
 
       <section className="task-toolbar" aria-label="Task board filters">
         <Input
+          ref={searchInputRef}
           label="Search tasks"
           placeholder="Code or title"
           startIcon={<Search size={17} />}
@@ -450,11 +577,62 @@ export function TaskBoardPage() {
           <ListFilter aria-hidden="true" size={15} />
           {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} shown
         </span>
+        {canManage && tasks.length > 0 && (
+          <label className="task-select-all">
+            <input
+              type="checkbox"
+              checked={tasks.every((task) => selectedTaskIds.has(task.id))}
+              onChange={toggleAllVisible}
+            />
+            Select all visible
+          </label>
+        )}
         <span>
           <RefreshCw aria-hidden="true" size={15} />
           Auto-updates every 5 seconds
         </span>
       </div>
+
+      {canManage && selectedTaskIds.size > 0 && (
+        <section className="task-bulk-actions" aria-label="Bulk task actions">
+          <strong>{selectedTaskIds.size} selected</strong>
+          <SelectField
+            label="Move selected tasks to"
+            name="bulk-sprint"
+            value={bulkDestination}
+            disabled={bulkAssignSprint.isPending}
+            onChange={(event) => setBulkDestination(event.target.value)}
+          >
+            <option value="">Choose destination</option>
+            <option value="backlog">Backlog</option>
+            {sprintOptions.map((sprint) => (
+              <option key={sprint.id} value={sprint.id}>
+                {sprint.name}
+              </option>
+            ))}
+          </SelectField>
+          <div className="task-bulk-actions__buttons">
+            <Button
+              variant="ghost"
+              disabled={bulkAssignSprint.isPending}
+              onClick={() => {
+                setSelectedTaskIds(new Set())
+                setBulkDestination('')
+              }}
+            >
+              Clear
+            </Button>
+            <Button
+              disabled={!bulkDestination}
+              isLoading={bulkAssignSprint.isPending}
+              onClick={() => void applyBulkSprint()}
+            >
+              Apply to {selectedTaskIds.size}{' '}
+              {selectedTaskIds.size === 1 ? 'task' : 'tasks'}
+            </Button>
+          </div>
+        </section>
+      )}
 
       {tasksQuery.isLoading ? (
         <TaskBoardSkeleton />

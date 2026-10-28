@@ -26,6 +26,12 @@ public sealed record TaskSprintAssignmentSummary(
     Guid? SprintId,
     string? SprintName);
 
+public sealed record BulkTaskVersion(Guid TaskId, byte[] ExpectedRowVersion);
+
+public sealed record BulkAssignTasksToSprintCommand(
+    Guid? SprintId,
+    IReadOnlyList<BulkTaskVersion> Tasks);
+
 public sealed record DependencyTaskSummary(
     Guid Id,
     string Code,
@@ -56,6 +62,7 @@ public enum PlanningFailure
     SprintHasTasks,
     TaskNotFound,
     TaskArchived,
+    TaskConcurrencyConflict,
     SelfDependency,
     DependencyCycle,
 }

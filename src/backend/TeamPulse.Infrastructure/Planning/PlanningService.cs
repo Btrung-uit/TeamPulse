@@ -260,6 +260,81 @@ internal sealed class PlanningService(
                 sprint?.Name));
     }
 
+    public async Task<PlanningResult<bool>> BulkAssignTasksToSprintAsync(
+        Guid workspaceId,
+        Guid projectId,
+        Guid actorUserId,
+        BulkAssignTasksToSprintCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var projectFailure = await GetProjectMutationFailureAsync(
+            workspaceId,
+            projectId,
+            cancellationToken);
+        if (projectFailure != PlanningFailure.None)
+        {
+            return PlanningResult<bool>.Failed(projectFailure);
+        }
+
+        if (command.SprintId.HasValue && await FindSprintAsync(
+                workspaceId,
+                projectId,
+                command.SprintId.Value,
+                cancellationToken) is null)
+        {
+            return PlanningResult<bool>.Failed(PlanningFailure.SprintNotFound);
+        }
+
+        var taskIds = command.Tasks.Select(item => item.TaskId).ToArray();
+        var tasks = await dbContext.Tasks
+            .Where(task =>
+                task.WorkspaceId == workspaceId &&
+                task.ProjectId == projectId &&
+                taskIds.Contains(task.Id))
+            .ToListAsync(cancellationToken);
+        if (tasks.Count != taskIds.Length)
+        {
+            return PlanningResult<bool>.Failed(PlanningFailure.TaskNotFound);
+        }
+
+        if (tasks.Any(task => task.IsArchived))
+        {
+            return PlanningResult<bool>.Failed(PlanningFailure.TaskArchived);
+        }
+
+        var versions = command.Tasks.ToDictionary(item => item.TaskId);
+        if (tasks.Any(task => !task.RowVersion.AsSpan().SequenceEqual(
+                versions[task.Id].ExpectedRowVersion)))
+        {
+            return PlanningResult<bool>.Failed(PlanningFailure.TaskConcurrencyConflict);
+        }
+
+        foreach (var task in tasks.Where(task => task.SprintId != command.SprintId))
+        {
+            var previousSprintId = task.SprintId;
+            task.AssignToSprint(command.SprintId);
+            AddActivity(
+                workspaceId,
+                actorUserId,
+                ActivityAction.TaskSprintChanged,
+                "Task",
+                task.Id,
+                previousValue: previousSprintId?.ToString(),
+                newValue: command.SprintId?.ToString());
+        }
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return PlanningResult<bool>.Failed(PlanningFailure.TaskConcurrencyConflict);
+        }
+
+        return PlanningResult<bool>.Success(true);
+    }
+
     public async Task<PlanningResult<IReadOnlyList<TaskDependencySummary>>> ListDependenciesAsync(
         Guid workspaceId,
         Guid projectId,

@@ -123,6 +123,62 @@
   gap: var(--space-2);
 }
 
+.task-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.task-select-all input,
+.task-card-selectable__checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-accent-strong);
+}
+
+.task-bulk-actions {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 360px) 1fr;
+  gap: var(--space-4);
+  align-items: end;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 34%, var(--color-border));
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-accent) 7%, var(--color-surface));
+  box-shadow: var(--shadow-card);
+}
+
+.task-bulk-actions > strong {
+  align-self: center;
+  white-space: nowrap;
+}
+
+.task-bulk-actions__buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.task-card-selectable {
+  position: relative;
+}
+
+.task-card-selectable__checkbox {
+  position: absolute;
+  z-index: 3;
+  top: var(--space-4);
+  left: var(--space-4);
+  cursor: pointer;
+}
+
+.task-card-selectable:has(.task-card-selectable__checkbox) .ui-task-card__code {
+  margin-left: 26px;
+}
+
 .task-board {
   display: grid;
   grid-template-columns: repeat(7, 284px);
@@ -774,6 +830,19 @@
 
   .task-board-summary > span:last-child {
     display: none;
+  }
+
+  .task-bulk-actions {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .task-bulk-actions__buttons {
+    justify-content: stretch;
+  }
+
+  .task-bulk-actions__buttons > .ui-button {
+    flex: 1;
   }
 
   .task-board {

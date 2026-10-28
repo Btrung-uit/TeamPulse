@@ -105,6 +105,71 @@ public sealed class PlanningEndpointsTests : IClassFixture<TeamPulseApiFactory>
     }
 
     [Fact]
+    public async Task BulkSprintAssignment_IsAtomicWhenAnyTaskVersionIsStale()
+    {
+        using var leader = await RegisterAsync("Bulk Sprint Leader");
+        var workspaceId = await CreateWorkspaceAsync(leader.Client, "Bulk Sprint Workspace");
+        var project = await CreateProjectAsync(leader.Client, workspaceId, "Bulk Sprint Project");
+        var first = await SeedTaskAsync(
+            workspaceId,
+            project.Id,
+            leader.UserId,
+            "TP-311",
+            "First bulk task");
+        var second = await SeedTaskAsync(
+            workspaceId,
+            project.Id,
+            leader.UserId,
+            "TP-312",
+            "Second bulk task");
+        var createSprint = await leader.Client.PostAsJsonAsync(
+            SprintsUrl(workspaceId, project.Id),
+            new SaveSprintRequest(
+                "Bulk Sprint",
+                null,
+                new DateOnly(2026, 10, 17),
+                new DateOnly(2026, 10, 31)));
+        var sprint = await createSprint.Content.ReadFromJsonAsync<SprintResponse>();
+        Assert.NotNull(sprint);
+
+        var assign = await leader.Client.PutAsJsonAsync(
+            $"{ProjectUrl(workspaceId, project.Id)}/tasks/sprint",
+            new BulkAssignSprintRequest(
+                sprint.Id,
+                [
+                    new BulkTaskRequest(first.Id, Convert.ToBase64String(first.RowVersion)),
+                    new BulkTaskRequest(second.Id, Convert.ToBase64String(second.RowVersion)),
+                ]));
+        Assert.Equal(HttpStatusCode.NoContent, assign.StatusCode);
+
+        var stale = await leader.Client.PutAsJsonAsync(
+            $"{ProjectUrl(workspaceId, project.Id)}/tasks/sprint",
+            new BulkAssignSprintRequest(
+                null,
+                [
+                    new BulkTaskRequest(first.Id, Convert.ToBase64String(first.RowVersion)),
+                    new BulkTaskRequest(second.Id, Convert.ToBase64String([1, 2, 3])),
+                ]));
+        await AssertErrorAsync(stale, HttpStatusCode.Conflict, "task_concurrency_conflict");
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TeamPulseDbContext>();
+        var persisted = await dbContext.Tasks
+            .IgnoreQueryFilters()
+            .Where(task => task.Id == first.Id || task.Id == second.Id)
+            .ToListAsync();
+        Assert.All(persisted, task => Assert.Equal(sprint.Id, task.SprintId));
+        Assert.Equal(
+            2,
+            await dbContext.ActivityLogs
+                .IgnoreQueryFilters()
+                .CountAsync(activity =>
+                    activity.WorkspaceId == workspaceId &&
+                    activity.Action == ActivityAction.TaskSprintChanged &&
+                    (activity.EntityId == first.Id || activity.EntityId == second.Id)));
+    }
+
+    [Fact]
     public async Task DependencyFlow_RejectsCrossProjectAndCycles_AndReturnsRiskWarnings()
     {
         using var leader = await RegisterAsync("Dependency Leader");
@@ -259,6 +324,11 @@ public sealed class PlanningEndpointsTests : IClassFixture<TeamPulseApiFactory>
         var assignSprint = await reader.Client.PutAsJsonAsync(
             $"{ProjectUrl(workspaceId, project.Id)}/tasks/{task.Id}/sprint",
             new AssignSprintRequest(null));
+        var bulkAssignSprint = await reader.Client.PutAsJsonAsync(
+            $"{ProjectUrl(workspaceId, project.Id)}/tasks/sprint",
+            new BulkAssignSprintRequest(
+                null,
+                [new BulkTaskRequest(task.Id, Convert.ToBase64String(task.RowVersion))]));
         var createDependency = await CreateDependencyAsync(
             reader.Client,
             workspaceId,
@@ -267,7 +337,7 @@ public sealed class PlanningEndpointsTests : IClassFixture<TeamPulseApiFactory>
             Guid.NewGuid());
 
         Assert.All(
-            new[] { createSprint, assignSprint, createDependency },
+            new[] { createSprint, assignSprint, bulkAssignSprint, createDependency },
             response => Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode));
     }
 
@@ -435,6 +505,12 @@ public sealed class PlanningEndpointsTests : IClassFixture<TeamPulseApiFactory>
         DateOnly EndsOn);
 
     private sealed record AssignSprintRequest(Guid? SprintId);
+
+    private sealed record BulkAssignSprintRequest(
+        Guid? SprintId,
+        IReadOnlyList<BulkTaskRequest> Tasks);
+
+    private sealed record BulkTaskRequest(Guid TaskId, string RowVersion);
 
     private sealed record SprintResponse(Guid Id, int TaskCount);
 

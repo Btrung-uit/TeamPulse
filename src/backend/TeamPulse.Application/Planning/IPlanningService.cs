@@ -37,6 +37,13 @@ public interface IPlanningService
         Guid actorUserId,
         CancellationToken cancellationToken = default);
 
+    Task<PlanningResult<bool>> BulkAssignTasksToSprintAsync(
+        Guid workspaceId,
+        Guid projectId,
+        Guid actorUserId,
+        BulkAssignTasksToSprintCommand command,
+        CancellationToken cancellationToken = default);
+
     Task<PlanningResult<IReadOnlyList<TaskDependencySummary>>> ListDependenciesAsync(
         Guid workspaceId,
         Guid projectId,
