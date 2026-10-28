@@ -1,6 +1,4 @@
-import type { CSSProperties } from 'react'
 import {
-  Activity,
   ArrowUpRight,
   CircleAlert,
   CircleHelp,
@@ -8,7 +6,6 @@ import {
   GitPullRequest,
   ListTodo,
   RefreshCw,
-  Presentation,
   TrendingUp,
   Users,
 } from 'lucide-react'
@@ -19,7 +16,6 @@ import { EmptyState } from '@/components/ui/EmptyState/EmptyState'
 import { StatusBadge } from '@/components/ui/StatusBadge/StatusBadge'
 import { SystemState } from '@/components/ui/SystemState/SystemState'
 import { useDashboard } from '@/features/dashboard/dashboardQueries'
-import type { DashboardActivity } from '@/features/dashboard/types'
 import { projectPath } from '@/features/projects/projectPaths'
 import { useProject } from '@/features/projects/useProject'
 import {
@@ -28,16 +24,6 @@ import {
   statusForCard,
 } from '@/features/tasks/taskBoardModel'
 import { useWorkspace } from '@/features/workspaces/useWorkspace'
-
-const statusLabels = {
-  Todo: 'Todo',
-  InProgress: 'In progress',
-  EvidenceLinked: 'Evidence linked',
-  InReview: 'In review',
-  NeedsChanges: 'Needs changes',
-  Blocked: 'Blocked',
-  Done: 'Done',
-}
 
 function DashboardSkeleton() {
   return (
@@ -48,7 +34,7 @@ function DashboardSkeleton() {
       aria-label="Loading dashboard"
     >
       <div className="metric-grid">
-        {Array.from({ length: 4 }, (_, index) => (
+        {Array.from({ length: 3 }, (_, index) => (
           <div className="metric-card skeleton-block" key={index} />
         ))}
       </div>
@@ -58,21 +44,6 @@ function DashboardSkeleton() {
       </div>
     </div>
   )
-}
-
-function activityText(activity: DashboardActivity) {
-  const code = activity.taskCode ? `${activity.taskCode} ` : ''
-  const descriptions: Record<string, string> = {
-    TaskCreated: `created ${code.trim()}`,
-    TaskUpdated: `updated ${code.trim()}`,
-    TaskStatusChanged: `moved ${code}to ${activity.newValue ?? 'a new status'}`,
-    TaskEvidenceAdded: `linked evidence to ${code.trim()}`,
-    TaskReviewAccepted: `accepted ${code.trim()}`,
-    TaskChangesRequested: `requested changes on ${code.trim()}`,
-    ProjectCreated: 'created this project',
-    ProjectUpdated: 'updated this project',
-  }
-  return descriptions[activity.action] ?? `updated ${code || 'the project'}`
 }
 
 function formatDateTime(value: string | null) {
@@ -121,16 +92,8 @@ function DashboardPage() {
       <div className="dashboard-page">
         <header className="page-header">
           <div>
-            <p className="eyebrow">{currentProject!.name}</p>
             <h1>Project dashboard</h1>
           </div>
-          <Link
-            className="page-header__action"
-            to={`${projectBase}/presentation`}
-          >
-            Present project
-            <Presentation aria-hidden="true" size={17} />
-          </Link>
         </header>
         <EmptyState
           icon={<ListTodo size={26} />}
@@ -159,14 +122,6 @@ function DashboardPage() {
       to: `${projectBase}/tasks?view=open`,
     },
     {
-      label: 'Open tasks',
-      value: dashboard.kpis.openTasks,
-      detail: 'Across the current project',
-      icon: ListTodo,
-      tone: 'neutral',
-      to: `${projectBase}/tasks?view=open`,
-    },
-    {
       label: 'Waiting review',
       value: dashboard.kpis.inReviewTasks,
       detail: 'Ready for a reviewer',
@@ -175,7 +130,7 @@ function DashboardPage() {
       to: `${projectBase}/tasks?status=InReview`,
     },
     {
-      label: 'Blocked / due soon',
+      label: 'Needs attention',
       value: `${dashboard.kpis.blockedTasks} / ${dashboard.kpis.dueSoonTasks}`,
       detail: 'Needs attention this week',
       icon: CircleAlert,
@@ -188,25 +143,13 @@ function DashboardPage() {
     <div className="dashboard-page">
       <header className="page-header">
         <div>
-          <p className="eyebrow">{currentProject!.name}</p>
           <h1>Project dashboard</h1>
-          <p>
-            Progress, workload and accepted contribution evidence in one view.
-          </p>
+          <p>See what needs attention, then move verified work forward.</p>
         </div>
-        <div className="page-header__actions">
-          <Link
-            className="page-header__action"
-            to={`${projectBase}/presentation`}
-          >
-            Present project
-            <Presentation aria-hidden="true" size={17} />
-          </Link>
-          <Link className="page-header__action" to={`${projectBase}/my-tasks`}>
-            View my tasks
-            <ArrowUpRight aria-hidden="true" size={17} />
-          </Link>
-        </div>
+        <Link className="page-header__action" to={`${projectBase}/my-tasks`}>
+          View my tasks
+          <ArrowUpRight aria-hidden="true" size={17} />
+        </Link>
       </header>
 
       <section className="metric-grid" aria-label="Project summary">
@@ -230,106 +173,9 @@ function DashboardPage() {
       </section>
 
       <div className="dashboard-grid">
-        <section className="dashboard-panel dashboard-panel--progress">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Project health</p>
-              <h2>Status breakdown</h2>
-            </div>
-            <span className="panel-heading__meta">
-              {dashboard.kpis.totalTasks} active tasks
-            </span>
-          </div>
-          <div className="progress-overview">
-            <div
-              className="progress-ring"
-              aria-label={`${dashboard.kpis.progressPercent} percent complete`}
-              style={
-                {
-                  '--dashboard-progress': `${dashboard.kpis.progressPercent}%`,
-                } as CSSProperties
-              }
-            >
-              <div>
-                <strong>{dashboard.kpis.progressPercent}%</strong>
-                <span>complete</span>
-              </div>
-            </div>
-            <div className="progress-breakdown">
-              {dashboard.statusBreakdown.map((item) => (
-                <div key={item.status}>
-                  <span>
-                    <i className={`is-${statusForCard[item.status]}`} />
-                    {statusLabels[item.status]}
-                  </span>
-                  <strong>{item.count}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-          {dashboard.kpis.blockedTasks > 0 && (
-            <Link
-              className="risk-callout"
-              to={`${projectBase}/tasks?status=Blocked`}
-            >
-              <CircleAlert aria-hidden="true" size={18} />
-              <div>
-                <strong>
-                  {dashboard.kpis.blockedTasks} blocked task
-                  {dashboard.kpis.blockedTasks === 1 ? '' : 's'} need attention.
-                </strong>
-                <span>
-                  Open the board to inspect ownership and dependencies.
-                </span>
-              </div>
-              <ArrowUpRight aria-hidden="true" size={17} />
-            </Link>
-          )}
-        </section>
-
-        <section className="dashboard-panel dashboard-panel--workload">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Capacity</p>
-              <h2>Team workload</h2>
-            </div>
-            <Users aria-hidden="true" size={20} />
-          </div>
-          <div className="workload-list">
-            {dashboard.workload.map((member) => (
-              <article key={member.userId}>
-                <span className="activity-avatar" aria-hidden="true">
-                  {memberInitials(member.displayName)}
-                </span>
-                <div>
-                  <strong>{member.displayName}</strong>
-                  <span>{member.role}</span>
-                </div>
-                <dl>
-                  <div>
-                    <dt>Open</dt>
-                    <dd>{member.openTasks}</dd>
-                  </div>
-                  <div>
-                    <dt>Blocked</dt>
-                    <dd>{member.blockedTasks}</dd>
-                  </div>
-                  <div>
-                    <dt>Due soon</dt>
-                    <dd>{member.dueSoonTasks}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className="dashboard-panel dashboard-panel--tasks">
           <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Focus</p>
-              <h2>My priority tasks</h2>
-            </div>
+            <h2>My priority tasks</h2>
             <Link to={`${projectBase}/my-tasks`}>View all</Link>
           </div>
           {dashboard.myPriorityTasks.length === 0 ? (
@@ -361,42 +207,43 @@ function DashboardPage() {
           )}
         </section>
 
-        <section className="dashboard-panel dashboard-panel--activity">
+        <section className="dashboard-panel dashboard-panel--workload">
           <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Team pulse</p>
-              <h2>Recent activity</h2>
-            </div>
-            <Activity aria-hidden="true" size={20} />
+            <h2>Team workload</h2>
+            <Users aria-hidden="true" size={20} />
           </div>
-          {dashboard.recentActivity.length === 0 ? (
-            <p className="dashboard-panel__empty">
-              No recent activity in this project.
-            </p>
-          ) : (
-            <ol className="activity-list">
-              {dashboard.recentActivity.map((item) => (
-                <li key={item.id}>
-                  <span className="activity-avatar" aria-hidden="true">
-                    {memberInitials(item.actorDisplayName)}
-                  </span>
-                  <p>
-                    <strong>{item.actorDisplayName}</strong>{' '}
-                    {activityText(item)}
-                    <time dateTime={item.occurredAtUtc}>
-                      {formatDateTime(item.occurredAtUtc)}
-                    </time>
-                  </p>
-                </li>
-              ))}
-            </ol>
-          )}
+          <div className="workload-list">
+            {dashboard.workload.map((member) => (
+              <article key={member.userId}>
+                <span className="activity-avatar" aria-hidden="true">
+                  {memberInitials(member.displayName)}
+                </span>
+                <div>
+                  <strong>{member.displayName}</strong>
+                  <span>{member.role}</span>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Open</dt>
+                    <dd>{member.openTasks}</dd>
+                  </div>
+                  <div>
+                    <dt>Blocked</dt>
+                    <dd>{member.blockedTasks}</dd>
+                  </div>
+                  <div>
+                    <dt>Due soon</dt>
+                    <dd>{member.dueSoonTasks}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className="dashboard-panel dashboard-panel--contribution">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Contribution summary</p>
               <h2>Accepted work, evidence and reviews</h2>
             </div>
             <span className="panel-heading__meta">

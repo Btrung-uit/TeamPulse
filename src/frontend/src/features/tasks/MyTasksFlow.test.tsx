@@ -337,7 +337,7 @@ describe('mobile monitoring navigation', () => {
       within(navigation)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Home', 'Tasks', 'Inbox', 'More'])
+    ).toEqual(['Dashboard', 'My tasks', 'Inbox', 'More'])
     expect(within(navigation).queryByText(/Import|Admin/i)).toBeNull()
   })
 })

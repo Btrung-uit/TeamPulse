@@ -56,11 +56,14 @@
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
-.metric-card,
 .dashboard-panel {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -70,20 +73,20 @@
 .metric-card {
   min-width: 0;
   padding: var(--space-5);
-  border-radius: var(--radius-card);
+}
+
+.metric-card + .metric-card {
+  border-left: 1px solid var(--color-border);
 }
 
 .metric-card--link {
   color: inherit;
   text-decoration: none;
-  transition:
-    border-color var(--motion-fast) var(--ease-standard),
-    transform var(--motion-fast) var(--ease-standard);
+  transition: background var(--motion-fast) var(--ease-standard);
 }
 
 .metric-card--link:hover {
-  border-color: var(--color-border-strong);
-  transform: translateY(-2px);
+  background: var(--color-surface-muted);
 }
 
 .metric-card__icon {
@@ -153,10 +156,6 @@
   margin-bottom: var(--space-6);
 }
 
-.panel-heading .eyebrow {
-  margin-bottom: var(--space-1);
-}
-
 .panel-heading__meta,
 .panel-heading > svg {
   flex: 0 0 auto;
@@ -168,144 +167,6 @@
   font-size: var(--font-size-xs);
   font-weight: 700;
   text-decoration: none;
-}
-
-.progress-overview {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-8);
-  align-items: center;
-}
-
-.progress-ring {
-  display: grid;
-  width: 154px;
-  height: 154px;
-  border-radius: 50%;
-  background: conic-gradient(
-    var(--color-accent-strong) 0 var(--dashboard-progress, 0%),
-    var(--color-surface-muted) var(--dashboard-progress, 0%) 100%
-  );
-  place-items: center;
-}
-
-.progress-ring::before {
-  width: 122px;
-  height: 122px;
-  border-radius: 50%;
-  background: var(--color-surface);
-  content: '';
-  grid-area: 1 / 1;
-}
-
-.progress-ring > div {
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  grid-area: 1 / 1;
-}
-
-.progress-ring strong {
-  color: var(--color-text);
-  font-size: 1.75rem;
-  letter-spacing: -0.04em;
-}
-
-.progress-ring span {
-  color: var(--color-text-subtle);
-  font-size: var(--font-size-xs);
-}
-
-.progress-breakdown {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-}
-
-.progress-breakdown > div {
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.progress-breakdown span {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-}
-
-.progress-breakdown i,
-.live-indicator i {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: var(--radius-pill);
-  background: var(--color-text-subtle);
-}
-
-.progress-breakdown i.is-done {
-  background: var(--color-success);
-}
-
-.progress-breakdown i.is-progress {
-  background: var(--color-accent-strong);
-}
-
-.progress-breakdown i.is-review {
-  background: var(--color-info);
-}
-
-.progress-breakdown i.is-blocked {
-  background: var(--color-danger);
-}
-
-.progress-breakdown strong {
-  color: var(--color-text);
-  font-size: var(--font-size-md);
-}
-
-.risk-callout {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-4);
-  margin-top: var(--space-6);
-  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, transparent);
-  border-radius: var(--radius-control);
-  color: var(--color-danger);
-  background: var(--color-danger-soft);
-  text-decoration: none;
-}
-
-.risk-callout div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-}
-
-.risk-callout strong {
-  color: var(--color-text);
-  font-size: var(--font-size-sm);
-}
-
-.risk-callout span {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-}
-
-.risk-callout button {
-  min-height: 36px;
-  padding: 0 var(--space-3);
-  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, transparent);
-  border-radius: var(--radius-control);
-  color: var(--color-danger);
-  background: transparent;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .deadline-date {
@@ -356,8 +217,7 @@
   font-weight: 720;
 }
 
-.priority-list,
-.activity-list {
+.priority-list {
   padding: 0;
   margin: 0;
 }
@@ -431,17 +291,6 @@
   white-space: nowrap;
 }
 
-.activity-list {
-  display: grid;
-  gap: var(--space-5);
-  list-style: none;
-}
-
-.activity-list li {
-  display: flex;
-  gap: var(--space-3);
-}
-
 .activity-avatar {
   display: grid;
   width: 34px;
@@ -453,36 +302,6 @@
   background: var(--color-surface-muted);
   font-size: 0.65rem;
   font-weight: 750;
-}
-
-.activity-list p {
-  margin-bottom: 0;
-  color: var(--color-text-muted);
-}
-
-.activity-list strong {
-  color: var(--color-text);
-}
-
-.activity-list time {
-  display: block;
-  margin-top: var(--space-1);
-  color: var(--color-text-subtle);
-  font-size: var(--font-size-xs);
-}
-
-.live-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--color-success);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-}
-
-.live-indicator i {
-  background: var(--color-success);
-  box-shadow: 0 0 0 4px var(--color-success-soft);
 }
 
 .dashboard-panel--contribution {
@@ -634,28 +453,8 @@
 }
 
 @media (max-width: 1200px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .dashboard-grid {
     grid-template-columns: 1fr;
-  }
-
-  .dashboard-panel--deadline {
-    order: 2;
-  }
-
-  .dashboard-panel--tasks {
-    order: 3;
-  }
-
-  .dashboard-panel--activity {
-    order: 4;
-  }
-
-  .dashboard-panel--contribution {
-    order: 5;
   }
 }
 
@@ -685,8 +484,12 @@
   }
 
   .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-3);
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card + .metric-card {
+    border-top: 1px solid var(--color-border);
+    border-left: 0;
   }
 
   .metric-card,
@@ -709,23 +512,6 @@
 
   .panel-heading {
     margin-bottom: var(--space-5);
-  }
-
-  .progress-overview {
-    grid-template-columns: 1fr;
-    justify-items: center;
-  }
-
-  .progress-breakdown {
-    width: 100%;
-  }
-
-  .risk-callout {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .risk-callout button {
-    grid-column: 1 / -1;
   }
 
   .priority-task {

@@ -70,21 +70,21 @@ export function MobileMorePage() {
         <Link to={`${projectBase}/engineering/pull-requests`}>
           <GitPullRequest aria-hidden="true" size={19} />
           <span>
-            <strong>PR status</strong>
+            <strong>PR waiting room</strong>
             <small>See work waiting for review</small>
           </span>
         </Link>
         <Link to={`${projectBase}/resources`}>
           <FolderOpen aria-hidden="true" size={19} />
           <span>
-            <strong>Resources</strong>
+            <strong>Resource hub</strong>
             <small>Open project links and documents</small>
           </span>
         </Link>
         <Link to={`${projectBase}/presentation`}>
           <Presentation aria-hidden="true" size={19} />
           <span>
-            <strong>Presentation</strong>
+            <strong>Presentation mode</strong>
             <small>Review the project story</small>
           </span>
         </Link>

@@ -140,6 +140,22 @@ describe('mobile more navigation', () => {
       '/workspaces/workspace-1/projects/project-1/tasks?attention=true',
     )
     expect(
+      screen.getByRole('link', { name: /PR waiting room/ }),
+    ).toHaveAttribute(
+      'href',
+      '/workspaces/workspace-1/projects/project-1/engineering/pull-requests',
+    )
+    expect(screen.getByRole('link', { name: /Resource hub/ })).toHaveAttribute(
+      'href',
+      '/workspaces/workspace-1/projects/project-1/resources',
+    )
+    expect(
+      screen.getByRole('link', { name: /Presentation mode/ }),
+    ).toHaveAttribute(
+      'href',
+      '/workspaces/workspace-1/projects/project-1/presentation',
+    )
+    expect(
       screen.getByRole('link', { name: /Help & glossary/ }),
     ).toHaveAttribute('href', '/workspaces/workspace-1/help')
   })

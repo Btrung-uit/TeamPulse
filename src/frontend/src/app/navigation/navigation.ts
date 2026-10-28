@@ -140,8 +140,8 @@ export function mobileNavigation(
   const projectBase = `${projectList}/${projectId}`
 
   return [
-    { label: 'Home', to: projectBase, icon: LayoutDashboard, end: true },
-    { label: 'Tasks', to: `${projectBase}/my-tasks`, icon: ClipboardCheck },
+    { label: 'Dashboard', to: projectBase, icon: LayoutDashboard, end: true },
+    { label: 'My tasks', to: `${projectBase}/my-tasks`, icon: ClipboardCheck },
     { label: 'Inbox', to: `${projectBase}/inbox`, icon: Inbox },
     { label: 'More', to: `${projectBase}/more`, icon: MoreHorizontal },
   ]

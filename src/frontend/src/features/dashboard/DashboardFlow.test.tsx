@@ -100,7 +100,7 @@ function renderDashboard() {
 describe('Dashboard flow', () => {
   afterEach(() => vi.restoreAllMocks())
 
-  it('shows project reporting and links KPIs to matching task filters', async () => {
+  it('prioritizes actionable work and links the three summary signals to task filters', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(dashboard), {
         status: 200,
@@ -114,7 +114,15 @@ describe('Dashboard flow', () => {
     expect(
       screen.getByText('Accepted work, evidence and reviews'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Open tasks/i })).toHaveAttribute(
+    expect(
+      screen.getByRole('link', { name: /View my tasks/i }),
+    ).toHaveAttribute(
+      'href',
+      '/workspaces/workspace-1/projects/project-1/my-tasks',
+    )
+    expect(
+      screen.getByRole('link', { name: /Project progress/i }),
+    ).toHaveAttribute(
       'href',
       '/workspaces/workspace-1/projects/project-1/tasks?view=open',
     )
@@ -125,7 +133,7 @@ describe('Dashboard flow', () => {
       '/workspaces/workspace-1/projects/project-1/tasks?status=InReview',
     )
     expect(
-      screen.getByRole('link', { name: /Blocked \/ due soon/i }),
+      screen.getByRole('link', { name: /Needs attention/i }),
     ).toHaveAttribute(
       'href',
       '/workspaces/workspace-1/projects/project-1/tasks?attention=true',
@@ -133,6 +141,10 @@ describe('Dashboard flow', () => {
     expect(
       screen.getByText('No score or commit-count ranking'),
     ).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Open tasks/i })).toBeNull()
+    expect(screen.queryByText('Status breakdown')).toBeNull()
+    expect(screen.queryByText('Recent activity')).toBeNull()
+    expect(screen.queryByRole('link', { name: /Present project/i })).toBeNull()
     expect(
       screen.getByRole('link', { name: 'How contribution is counted' }),
     ).toHaveAttribute('href', '/workspaces/workspace-1/help#contribution')
