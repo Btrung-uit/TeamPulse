@@ -400,9 +400,7 @@ export function TaskBoardPage() {
           dueDate={dueLabel(task.dueOn)}
           overdue={isOverdue(task)}
           blocked={task.status === 'Blocked'}
-          selected={
-            selectedTaskId === task.id || selectedTaskIds.has(task.id)
-          }
+          selected={selectedTaskId === task.id || selectedTaskIds.has(task.id)}
           onClick={() => selectTask(task.id)}
         />
       </div>

@@ -237,9 +237,11 @@ test('leader import → member evidence → leader review → presentation', asy
 
   await test.step('Dashboard and presentation show the accepted outcome', async () => {
     await activate(page.getByRole('link', { name: 'Dashboard', exact: true }))
-    await expect(page.getByLabel('50 percent complete')).toBeVisible()
+    const progressMetric = page.getByRole('link', { name: /Project progress/i })
+    await expect(progressMetric).toContainText('50%')
+    await expect(progressMetric).toContainText('1 of 2 tasks done')
     await expectAccessible(page, 'project dashboard')
-    await activate(page.getByRole('link', { name: 'Present project' }))
+    await activate(page.getByRole('link', { name: 'Presentation mode' }))
     await expect(
       page.getByRole('heading', { name: 'TeamPulse Core Demo' }),
     ).toBeVisible()

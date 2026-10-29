@@ -146,7 +146,8 @@
   gap: var(--space-4);
   align-items: end;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 34%, var(--color-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-accent) 34%, var(--color-border));
   border-radius: var(--radius-card);
   background: color-mix(in srgb, var(--color-accent) 7%, var(--color-surface));
   box-shadow: var(--shadow-card);
